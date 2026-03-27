@@ -42,6 +42,11 @@ mod property_token {
         ProposalNotFound,
         ProposalClosed,
         AskNotFound,
+        // Slashing-specific errors
+        SlashCooldownActive,
+        SlashBlacklisted,
+        UnauthorizedSlashingRole,
+        SlashingACLRequired,
     }
 
     /// Property Token contract that maintains compatibility with ERC-721 and ERC-1155
@@ -109,6 +114,17 @@ mod property_token {
         execution_history_items: Mapping<u32, ExecutionHistoryEntry>,
         slashing_history_count: u32,
         slashing_history_items: Mapping<u32, SlashingHistoryEntry>,
+
+        // Slashing ACL: Role -> whether it can slash specific roles
+        // slashing_acl: (SlashingRole, Role) -> bool
+        slashing_acl: Mapping<(u8, u8), bool>,
+        
+        // Slashing cooldown: (target, role) -> last slash timestamp
+        slashing_cooldowns: Mapping<(AccountId, u8), u64>,
+        slashing_cooldown_period: u64, // Default cooldown period in seconds
+        
+        // Slashing blacklist: account -> whether blacklisted from slashing
+        slashing_blacklist: Mapping<AccountId, bool>,
 
         // Multi-role identity management
         role_assignments: Mapping<AccountId, Vec<Role>>, // Account -> roles assigned
@@ -573,6 +589,26 @@ mod property_token {
         pub pagination: PaginationInfo,
     }
 
+    /// Slashing eligibility information
+    #[derive(
+        Debug,
+        Clone,
+        PartialEq,
+        scale::Encode,
+        scale::Decode,
+        ink::storage::traits::StorageLayout,
+    )]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct SlashingEligibility {
+        pub target: AccountId,
+        pub role: SlashingRole,
+        pub is_blacklisted: bool,
+        pub cooldown_remaining: u64,
+        pub cooldown_period: u64,
+        pub last_slash_timestamp: u64,
+        pub can_be_slashed: bool,
+    }
+
     // Events for tracking property token operations
     #[ink(event)]
     pub struct Transfer {
@@ -870,6 +906,12 @@ mod property_token {
                 slashing_history_count: 0,
                 slashing_history_items: Mapping::default(),
 
+                // Slashing ACL, cooldown, and blacklist initialized
+                slashing_acl: Mapping::default(),
+                slashing_cooldowns: Mapping::default(),
+                slashing_cooldown_period: 86400, // 24 hours default cooldown
+                slashing_blacklist: Mapping::default(),
+
                 // Multi-role identity management initialized
                 role_assignments: Mapping::default(),
                 role_info: Mapping::default(),
@@ -878,6 +920,32 @@ mod property_token {
                 annual_review_logs: Mapping::default(),
                 annual_review_counter: 0,
                 role_timelock_seconds: 604800, // 7 days default timelock
+            }
+        }
+
+        // =============================================================================
+        // Helper methods for role and slashing operations
+        // =============================================================================
+
+        /// Convert SlashingRole enum to u8 for storage key
+        fn role_to_id(&self, role: &SlashingRole) -> u8 {
+            match role {
+                SlashingRole::OracleProvider => 0,
+                SlashingRole::GovernanceParticipant => 1,
+                SlashingRole::RiskPoolProvider => 2,
+                SlashingRole::ClaimSubmitter => 3,
+                SlashingRole::BridgeOperator => 4,
+                SlashingRole::Other(_) => 255,
+            }
+        }
+
+        /// Convert Role enum to u8 for storage key
+        fn role_to_id_internal(&self, role: &Role) -> u8 {
+            match role {
+                Role::Admin => 0,
+                Role::Auditor => 1,
+                Role::LiquidityManager => 2,
+                Role::GovernanceOperator => 3,
             }
         }
 
@@ -3121,6 +3189,7 @@ mod property_token {
         }
 
         /// Enterprise-grade API: Record slashing event (admin/governance only)
+        /// with role-based ACL guard and cooldown protection
         #[ink(message)]
         pub fn record_slashing(
             &mut self,
@@ -3130,13 +3199,29 @@ mod property_token {
             slashed_amount: u128,
             authority: AccountId,
         ) -> Result<(), Error> {
-            // Only admin or governance can record slashing
+            // Only admin can record slashing directly
             let caller = self.env().caller();
-            if caller != self.admin && caller != authority {
+            if caller != self.admin {
                 return Err(Error::Unauthorized);
             }
             
-            // Count repeat offenses
+            // Check if target is blacklisted from being slashed
+            if self.slashing_blacklist.get(&target).unwrap_or(false) {
+                return Err(Error::SlashBlacklisted);
+            }
+            
+            // Convert SlashingRole to u8 for storage key
+            let role_id = self.role_to_id(&role);
+            
+            // Check cooldown period - prevent repeated slashing for same target/role
+            let cooldown_key = (target, role_id);
+            let last_slash = self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0);
+            let now = self.env().block_timestamp();
+            if now.saturating_sub(last_slash) < self.slashing_cooldown_period {
+                return Err(Error::SlashCooldownActive);
+            }
+            
+            // Count repeat offenses for history
             let mut repeat_count = 0u32;
             for i in 0..self.slashing_history_count {
                 if let Some(entry) = self.slashing_history_items.get(&i) {
@@ -3153,7 +3238,7 @@ mod property_token {
                 role,
                 reason,
                 slashed_amount,
-                slashed_at: self.env().block_timestamp(),
+                slashed_at: now,
                 transaction_hash: tx_hash,
                 authority,
                 repeat_offense_count: repeat_count,
@@ -3164,7 +3249,226 @@ mod property_token {
             self.slashing_history_items.insert(&history_count, &slashing_entry);
             self.slashing_history_count = history_count + 1;
             
+            // Update cooldown timestamp
+            self.slashing_cooldowns.insert(&cooldown_key, &now);
+            
+            // Emit event for slashing
+            self.env().emit_event(SlashingRecorded {
+                target,
+                role,
+                reason,
+                slashed_amount,
+                authority,
+                cooldown_until: now.saturating_add(self.slashing_cooldown_period),
+            });
+            
             Ok(())
+        }
+        
+        /// Record slashing with explicit role-scope ACL
+        /// Only accounts with the required ACL permission can slash specific roles
+        #[ink(message)]
+        pub fn record_slashing_with_acl(
+            &mut self,
+            target: AccountId,
+            target_role: SlashingRole,
+            reason: SlashingReason,
+            slashed_amount: u128,
+            caller_role: Role,
+        ) -> Result<(), Error> {
+            let caller = self.env().caller();
+            
+            // Check if caller has the required ACL permission
+            let caller_role_id = self.role_to_id_internal(&caller_role);
+            let target_role_id = self.role_to_id(&target_role);
+            let acl_key = (caller_role_id, target_role_id);
+            
+            if !self.slashing_acl.get(&acl_key).unwrap_or(false) {
+                return Err(Error::SlashingACLRequired);
+            }
+            
+            // Check if target is blacklisted from being slashed
+            if self.slashing_blacklist.get(&target).unwrap_or(false) {
+                return Err(Error::SlashBlacklisted);
+            }
+            
+            // Check cooldown period
+            let cooldown_key = (target, target_role_id);
+            let last_slash = self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0);
+            let now = self.env().block_timestamp();
+            if now.saturating_sub(last_slash) < self.slashing_cooldown_period {
+                return Err(Error::SlashCooldownActive);
+            }
+            
+            // Count repeat offenses
+            let mut repeat_count = 0u32;
+            for i in 0..self.slashing_history_count {
+                if let Some(entry) = self.slashing_history_items.get(&i) {
+                    if entry.target == target && entry.role == target_role {
+                        repeat_count += 1;
+                    }
+                }
+            }
+            
+            // Create slashing history entry
+            let tx_hash = Hash::from([0u8; 32]);
+            let slashing_entry = SlashingHistoryEntry {
+                target: target.clone(),
+                role: target_role.clone(),
+                reason,
+                slashed_amount,
+                slashed_at: now,
+                transaction_hash: tx_hash,
+                authority: caller,
+                repeat_offense_count: repeat_count,
+            };
+            
+            // Store in history
+            let history_count = self.slashing_history_count;
+            self.slashing_history_items.insert(&history_count, &slashing_entry);
+            self.slashing_history_count = history_count + 1;
+            
+            // Update cooldown timestamp
+            self.slashing_cooldowns.insert(&cooldown_key, &now);
+            
+            // Emit event
+            self.env().emit_event(SlashingRecorded {
+                target,
+                role: target_role,
+                reason,
+                slashed_amount,
+                authority: caller,
+                cooldown_until: now.saturating_add(self.slashing_cooldown_period),
+            });
+            
+            Ok(())
+        }
+        
+        /// Set slashing blacklist for an account (admin only)
+        #[ink(message)]
+        pub fn set_slashing_blacklist(
+            &mut self,
+            account: AccountId,
+            blacklisted: bool,
+        ) -> Result<(), Error> {
+            let caller = self.env().caller();
+            if caller != self.admin {
+                return Err(Error::Unauthorized);
+            }
+            
+            self.slashing_blacklist.insert(&account, &blacklisted);
+            
+            self.env().emit_event(SlashingBlacklistUpdated {
+                account,
+                blacklisted,
+                updated_by: caller,
+            });
+            
+            Ok(())
+        }
+        
+        /// Get slashing eligibility for a target account
+        #[ink(message)]
+        pub fn get_slashing_eligibility(
+            &self,
+            target: AccountId,
+            role: SlashingRole,
+        ) -> SlashingEligibility {
+            // Check if blacklisted
+            let is_blacklisted = self.slashing_blacklist.get(&target).unwrap_or(false);
+            
+            // Check cooldown status
+            let role_id = self.role_to_id(&role);
+            let cooldown_key = (target, role_id);
+            let last_slash = self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0);
+            let now = self.env().block_timestamp();
+            let cooldown_remaining = if last_slash == 0 {
+                0
+            } else {
+                let elapsed = now.saturating_sub(last_slash);
+                if elapsed >= self.slashing_cooldown_period {
+                    0
+                } else {
+                    self.slashing_cooldown_period.saturating_sub(elapsed)
+                }
+            };
+            
+            SlashingEligibility {
+                target,
+                role,
+                is_blacklisted,
+                cooldown_remaining,
+                cooldown_period: self.slashing_cooldown_period,
+                last_slash_timestamp: last_slash,
+                can_be_slashed: !is_blacklisted && cooldown_remaining == 0,
+            }
+        }
+        
+        /// Set slashing cooldown period (admin only)
+        #[ink(message)]
+        pub fn set_slashing_cooldown(&mut self, period_seconds: u64) -> Result<(), Error> {
+            let caller = self.env().caller();
+            if caller != self.admin {
+                return Err(Error::Unauthorized);
+            }
+            
+            self.slashing_cooldown_period = period_seconds;
+            Ok(())
+        }
+        
+        /// Set slashing ACL for a role (admin only)
+        /// slasher_role: the role performing the slashing
+        /// target_role: the role being slashed
+        /// allowed: whether slasher can slash target
+        #[ink(message)]
+        pub fn set_slashing_acl(
+            &mut self,
+            slasher_role: Role,
+            target_role: SlashingRole,
+            allowed: bool,
+        ) -> Result<(), Error> {
+            let caller = self.env().caller();
+            if caller != self.admin {
+                return Err(Error::Unauthorized);
+            }
+            
+            let slasher_role_id = self.role_to_id_internal(&slasher_role);
+            let target_role_id = self.role_to_id(&target_role);
+            let acl_key = (slasher_role_id, target_role_id);
+            
+            self.slashing_acl.insert(&acl_key, &allowed);
+            
+            self.env().emit_event(SlashingACLUpdated {
+                slasher_role,
+                target_role,
+                allowed,
+                updated_by: caller,
+            });
+            
+            Ok(())
+        }
+        
+        /// Check if a role can slash another role
+        #[ink(message)]
+        pub fn can_role_slash(&self, slasher_role: Role, target_role: SlashingRole) -> bool {
+            let slasher_role_id = self.role_to_id_internal(&slasher_role);
+            let target_role_id = self.role_to_id(&target_role);
+            let acl_key = (slasher_role_id, target_role_id);
+            self.slashing_acl.get(&acl_key).unwrap_or(false)
+        }
+        
+        /// Get slashing cooldown period
+        #[ink(message)]
+        pub fn get_slashing_cooldown_period(&self) -> u64 {
+            self.slashing_cooldown_period
+        }
+        
+        /// Get last slash timestamp for a target and role
+        #[ink(message)]
+        pub fn get_last_slash_timestamp(&self, target: AccountId, role: SlashingRole) -> u64 {
+            let role_id = self.role_to_id(&role);
+            let cooldown_key = (target, role_id);
+            self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0)
         }
 
         /// Enterprise-grade API: Get slashing history with pagination
@@ -3785,6 +4089,39 @@ mod property_token {
         vetoed_by: AccountId,
         reason: String,
         vetoed_at: u64,
+    }
+
+    /// Event emitted when a slashing is recorded
+    #[ink(event)]
+    pub struct SlashingRecorded {
+        #[ink(topic)]
+        pub target: AccountId,
+        #[ink(topic)]
+        pub role: SlashingRole,
+        pub reason: SlashingReason,
+        pub slashed_amount: u128,
+        pub authority: AccountId,
+        pub cooldown_until: u64,
+    }
+
+    /// Event emitted when slashing blacklist is updated
+    #[ink(event)]
+    pub struct SlashingBlacklistUpdated {
+        #[ink(topic)]
+        pub account: AccountId,
+        pub blacklisted: bool,
+        pub updated_by: AccountId,
+    }
+
+    /// Event emitted when slashing ACL is updated
+    #[ink(event)]
+    pub struct SlashingACLUpdated {
+        #[ink(topic)]
+        pub slasher_role: Role,
+        #[ink(topic)]
+        pub target_role: SlashingRole,
+        pub allowed: bool,
+        pub updated_by: AccountId,
     }
 
     // Unit tests for the PropertyToken contract
@@ -4723,6 +5060,293 @@ mod property_token {
             assert!(contract.has_role(accounts.bob, Role::Auditor));
             assert!(contract.has_role(accounts.charlie, Role::LiquidityManager));
             assert!(contract.has_role(accounts.david, Role::GovernanceOperator));
+        }
+
+        // =============================================================================
+        // Slashing ACL and Cooldown Tests
+        // =============================================================================
+
+        #[ink::test]
+        fn test_record_slashing_with_cooldown() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            let target = accounts.bob;
+            let role = SlashingRole::GovernanceParticipant;
+            let reason = SlashingReason::GovernanceAttack;
+            let slashed_amount = 1000;
+            
+            // First slash should succeed
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            assert!(contract.record_slashing(
+                target,
+                role.clone(),
+                reason.clone(),
+                slashed_amount,
+                contract.admin(),
+            ).is_ok());
+            
+            // Second slash immediately should fail due to cooldown
+            assert_eq!(
+                contract.record_slashing(
+                    target,
+                    role.clone(),
+                    reason.clone(),
+                    slashed_amount,
+                    contract.admin(),
+                ),
+                Err(Error::SlashCooldownActive)
+            );
+        }
+
+        #[ink::test]
+        fn test_slashing_blacklist() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            let target = accounts.bob;
+            
+            // Blacklist the target
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            assert!(contract.set_slashing_blacklist(target, true).is_ok());
+            
+            // Slashing should fail due to blacklist
+            assert_eq!(
+                contract.record_slashing(
+                    target,
+                    SlashingRole::GovernanceParticipant,
+                    SlashingReason::GovernanceAttack,
+                    1000,
+                    contract.admin(),
+                ),
+                Err(Error::SlashBlacklisted)
+            );
+            
+            // Remove from blacklist
+            assert!(contract.set_slashing_blacklist(target, false).is_ok());
+            
+            // Slashing should now succeed
+            assert!(contract.record_slashing(
+                target,
+                SlashingRole::GovernanceParticipant,
+                SlashingReason::GovernanceAttack,
+                1000,
+                contract.admin(),
+            ).is_ok());
+        }
+
+        #[ink::test]
+        fn test_get_slashing_eligibility() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            let target = accounts.bob;
+            let role = SlashingRole::OracleProvider;
+            
+            // Initial eligibility - should be eligible
+            let eligibility = contract.get_slashing_eligibility(target, role.clone());
+            assert!(!eligibility.is_blacklisted);
+            assert_eq!(eligibility.cooldown_remaining, 0);
+            assert!(eligibility.can_be_slashed);
+            
+            // Blacklist the target
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract.set_slashing_blacklist(target, true).unwrap();
+            
+            // Should not be eligible now
+            let eligibility = contract.get_slashing_eligibility(target, role.clone());
+            assert!(eligibility.is_blacklisted);
+            assert!(!eligibility.can_be_slashed);
+        }
+
+        #[ink::test]
+        fn test_slashing_acl() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            // Set ACL: Auditor can slash GovernanceParticipant
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            assert!(contract.set_slashing_acl(
+                Role::Auditor,
+                SlashingRole::GovernanceParticipant,
+                true,
+            ).is_ok());
+            
+            // Verify ACL is set
+            assert!(contract.can_role_slash(Role::Auditor, SlashingRole::GovernanceParticipant));
+            
+            // Verify default ACL is false
+            assert!(!contract.can_role_slash(Role::Auditor, SlashingRole::OracleProvider));
+            
+            // Remove ACL
+            assert!(contract.set_slashing_acl(
+                Role::Auditor,
+                SlashingRole::GovernanceParticipant,
+                false,
+            ).is_ok());
+            assert!(!contract.can_role_slash(Role::Auditor, SlashingRole::GovernanceParticipant));
+        }
+
+        #[ink::test]
+        fn test_record_slashing_with_acl() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            // Grant Auditor role to bob
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract.grant_role(accounts.bob, Role::Auditor, None).unwrap();
+            
+            // Set ACL: Auditor can slash GovernanceParticipant
+            assert!(contract.set_slashing_acl(
+                Role::Auditor,
+                SlashingRole::GovernanceParticipant,
+                true,
+            ).is_ok());
+            
+            // Bob (Auditor) should be able to slash GovernanceParticipant
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            assert!(contract.record_slashing_with_acl(
+                accounts.charlie,
+                SlashingRole::GovernanceParticipant,
+                SlashingReason::GovernanceAttack,
+                1000,
+                Role::Auditor,
+            ).is_ok());
+            
+            // Bob should not be able to slash OracleProvider (no ACL)
+            assert_eq!(
+                contract.record_slashing_with_acl(
+                    accounts.charlie,
+                    SlashingRole::OracleProvider,
+                    SlashingReason::OracleManipulation,
+                    1000,
+                    Role::Auditor,
+                ),
+                Err(Error::SlashingACLRequired)
+            );
+        }
+
+        #[ink::test]
+        fn test_slashing_cooldown_period() {
+            let mut contract = setup_contract();
+            
+            // Default cooldown should be 86400 (24 hours)
+            assert_eq!(contract.get_slashing_cooldown_period(), 86400);
+            
+            // Set new cooldown period
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            assert!(contract.set_slashing_cooldown(3600).is_ok()); // 1 hour
+            
+            // Verify new cooldown period
+            assert_eq!(contract.get_slashing_cooldown_period(), 3600);
+        }
+
+        #[ink::test]
+        fn test_get_last_slash_timestamp() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            let target = accounts.bob;
+            let role = SlashingRole::RiskPoolProvider;
+            
+            // Should be 0 initially
+            assert_eq!(contract.get_last_slash_timestamp(target, role.clone()), 0);
+            
+            // Record a slash
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract.record_slashing(
+                target,
+                role.clone(),
+                SlashingReason::MaliciousBehavior,
+                500,
+                contract.admin(),
+            ).unwrap();
+            
+            // Should now have a timestamp
+            let last_slash = contract.get_last_slash_timestamp(target, role.clone());
+            assert!(last_slash > 0);
+        }
+
+        #[ink::test]
+        fn test_slashing_blacklist_requires_admin() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            // Non-admin should not be able to set blacklist
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            assert_eq!(
+                contract.set_slashing_blacklist(accounts.charlie, true),
+                Err(Error::Unauthorized)
+            );
+        }
+
+        #[ink::test]
+        fn test_slashing_cooldown_requires_admin() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            // Non-admin should not be able to set cooldown
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            assert_eq!(
+                contract.set_slashing_cooldown(3600),
+                Err(Error::Unauthorized)
+            );
+        }
+
+        #[ink::test]
+        fn test_slashing_acl_requires_admin() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            // Non-admin should not be able to set ACL
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            assert_eq!(
+                contract.set_slashing_acl(
+                    Role::Auditor,
+                    SlashingRole::GovernanceParticipant,
+                    true,
+                ),
+                Err(Error::Unauthorized)
+            );
+        }
+
+        #[ink::test]
+        fn test_slashing_role_cooldowns_are_independent() {
+            let mut contract = setup_contract();
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            
+            let target = accounts.bob;
+            
+            // Slash for GovernanceParticipant role
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract.record_slashing(
+                target,
+                SlashingRole::GovernanceParticipant,
+                SlashingReason::GovernanceAttack,
+                1000,
+                contract.admin(),
+            ).unwrap();
+            
+            // Slashing GovernanceParticipant again should fail
+            assert_eq!(
+                contract.record_slashing(
+                    target,
+                    SlashingRole::GovernanceParticipant,
+                    SlashingReason::GovernanceAttack,
+                    1000,
+                    contract.admin(),
+                ),
+                Err(Error::SlashCooldownActive)
+            );
+            
+            // Slashing OracleProvider should succeed (different role = different cooldown)
+            assert!(contract.record_slashing(
+                target,
+                SlashingRole::OracleProvider,
+                SlashingReason::OracleManipulation,
+                1000,
+                contract.admin(),
+            ).is_ok());
         }
     }
 }
