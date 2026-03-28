@@ -411,6 +411,12 @@ mod propchain_insurance {
         // Claim cooldown: property_id -> last_claim_timestamp
         claim_cooldowns: Mapping<u64, u64>,
 
+        // Evidence tracking
+        evidence_count: u64,
+        evidence_items: Mapping<u64, EvidenceItem>,
+        claim_evidence: Mapping<u64, Vec<u64>>,
+        evidence_verifications: Mapping<u64, Vec<EvidenceVerification>>,
+
         // Oracle contract for parametric claims
         oracle_contract: Option<AccountId>,
 
@@ -588,6 +594,27 @@ mod propchain_insurance {
         timestamp: u64,
     }
 
+    #[ink(event)]
+    pub struct EvidenceSubmitted {
+        #[ink(topic)]
+        evidence_id: u64,
+        #[ink(topic)]
+        claim_id: u64,
+        evidence_type: String,
+        ipfs_hash: String,
+        submitter: AccountId,
+        submitted_at: u64,
+    }
+
+    #[ink(event)]
+    pub struct EvidenceVerified {
+        #[ink(topic)]
+        evidence_id: u64,
+        verified_by: AccountId,
+        is_valid: bool,
+        verified_at: u64,
+    }
+
     // =========================================================================
     // IMPLEMENTATION
     // =========================================================================
@@ -620,6 +647,10 @@ mod propchain_insurance {
                 authorized_oracles: Mapping::default(),
                 authorized_assessors: Mapping::default(),
                 claim_cooldowns: Mapping::default(),
+                evidence_count: 0,
+                evidence_items: Mapping::default(),
+                claim_evidence: Mapping::default(),
+                evidence_verifications: Mapping::default(),
                 platform_fee_rate: 200,            // 2%
                 claim_cooldown_period: 2_592_000,  // 30 days in seconds
                 min_pool_capital: 100_000_000_000, // Minimum pool capital
@@ -1622,8 +1653,316 @@ mod propchain_insurance {
         }
 
         // =====================================================================
-        // REINSURANCE
+        // CLAIMS EVIDENCE VERIFICATION SYSTEM
         // =====================================================================
+
+        /// Submit additional evidence for a claim (callable by claimant, assessor, or admin)
+        #[ink(message)]
+        pub fn submit_evidence(
+            &mut self,
+            claim_id: u64,
+            evidence_type: String,
+            ipfs_hash: String,
+            content_hash: Vec<u8>,
+            file_size: u64,
+            metadata_url: Option<String>,
+            description: Option<String>,
+        ) -> Result<u64, InsuranceError> {
+            let caller = self.env().caller();
+            let now = self.env().block_timestamp();
+
+            // Validate evidence type
+            if evidence_type.is_empty() {
+                return Err(InsuranceError::EvidenceNonceEmpty);
+            }
+
+            // Validate IPFS hash format (should start with Qm or similar)
+            if !ipfs_hash.starts_with("Qm") && !ipfs_hash.starts_with("bafy") {
+                return Err(InsuranceError::InvalidParameters);
+            }
+
+            // Validate content hash length (SHA-256 = 32 bytes)
+            if content_hash.len() != 32 {
+                return Err(InsuranceError::EvidenceInvalidHashLength);
+            }
+
+            // Get claim and verify it exists
+            let mut claim = self
+                .claims
+                .get(&claim_id)
+                .ok_or(InsuranceError::ClaimNotFound)?;
+
+            // Verify caller is authorized (claimant, assessor, or admin)
+            let is_authorized =
+                caller == claim.claimant || claim.assessor == Some(caller) || caller == self.admin;
+
+            if !is_authorized {
+                return Err(InsuranceError::Unauthorized);
+            }
+
+            // Create evidence item
+            let evidence_id = self.evidence_count + 1;
+            self.evidence_count = evidence_id;
+
+            let ipfs_uri = format!("ipfs://{}", ipfs_hash);
+            let reference_uri = ipfs_uri.clone();
+
+            let evidence = EvidenceItem {
+                id: evidence_id,
+                claim_id,
+                evidence_type: evidence_type.clone(),
+                ipfs_hash: ipfs_hash.clone(),
+                ipfs_uri: ipfs_uri.clone(),
+                content_hash: content_hash.clone(),
+                file_size,
+                submitter: caller,
+                submitted_at: now,
+                verified: false,
+                verified_by: None,
+                verified_at: None,
+                verification_notes: None,
+                metadata_url,
+            };
+
+            // Store evidence
+            self.evidence_items.insert(&evidence_id, &evidence);
+
+            // Add to claim's evidence list
+            let mut evidence_list = self.claim_evidence.get(&claim_id).unwrap_or_default();
+            evidence_list.push(evidence_id);
+            self.claim_evidence.insert(&claim_id, &evidence_list);
+
+            // Update claim with evidence IDs (for backward compatibility)
+            claim.evidence_ids = evidence_list.clone();
+            self.claims.insert(&claim_id, &claim);
+
+            // Emit event
+            self.env().emit_event(EvidenceSubmitted {
+                evidence_id,
+                claim_id,
+                evidence_type,
+                ipfs_hash,
+                submitter: caller,
+                submitted_at: now,
+            });
+
+            Ok(evidence_id)
+        }
+
+        /// Verify evidence item (callable by authorized assessors or admin)
+        #[ink(message)]
+        pub fn verify_evidence(
+            &mut self,
+            evidence_id: u64,
+            is_valid: bool,
+            notes: String,
+        ) -> Result<(), InsuranceError> {
+            let caller = self.env().caller();
+            let now = self.env().block_timestamp();
+
+            // Verify caller is authorized (admin or authorized assessor)
+            let is_assessor = self.authorized_assessors.get(&caller).unwrap_or(false);
+            if caller != self.admin && !is_assessor {
+                return Err(InsuranceError::Unauthorized);
+            }
+
+            // Get evidence item
+            let mut evidence = self
+                .evidence_items
+                .get(&evidence_id)
+                .ok_or(InsuranceError::ClaimNotFound)?;
+
+            // Prevent duplicate verification by same verifier
+            let verifications = self
+                .evidence_verifications
+                .get(&evidence_id)
+                .unwrap_or_default();
+            for verification in &verifications {
+                if verification.verifier == caller {
+                    return Err(InsuranceError::DuplicateClaim); // Reusing error for duplicate verification
+                }
+            }
+
+            // Perform verification checks
+            let ipfs_accessible = self.verify_ipfs_accessibility(&evidence.ipfs_hash);
+            let hash_matches = self.verify_content_hash(&evidence.content_hash);
+
+            // Update evidence status if this is the first verification and it's valid
+            if is_valid && !evidence.verified {
+                evidence.verified = true;
+                evidence.verified_by = Some(caller);
+                evidence.verified_at = Some(now);
+                evidence.verification_notes = Some(notes.clone());
+                self.evidence_items.insert(&evidence_id, &evidence);
+            }
+
+            // Create verification record
+            let verification = EvidenceVerification {
+                evidence_id,
+                verifier: caller,
+                verified_at: now,
+                is_valid,
+                notes: notes.clone(),
+                ipfs_accessible,
+                hash_matches,
+            };
+
+            // Store verification
+            let mut verifications = self
+                .evidence_verifications
+                .get(&evidence_id)
+                .unwrap_or_default();
+            verifications.push(verification);
+            self.evidence_verifications
+                .insert(&evidence_id, &verifications);
+
+            // Emit event
+            self.env().emit_event(EvidenceVerified {
+                evidence_id,
+                verified_by: caller,
+                is_valid,
+                verified_at: now,
+            });
+
+            Ok(())
+        }
+
+        /// Get all evidence items for a claim
+        #[ink(message)]
+        pub fn get_claim_evidence(&self, claim_id: u64) -> Vec<EvidenceItem> {
+            let evidence_ids = self.claim_evidence.get(&claim_id).unwrap_or_default();
+            let mut evidence_list = Vec::new();
+
+            for evidence_id in evidence_ids {
+                if let Some(evidence) = self.evidence_items.get(&evidence_id) {
+                    evidence_list.push(evidence);
+                }
+            }
+
+            evidence_list
+        }
+
+        /// Get specific evidence item by ID
+        #[ink(message)]
+        pub fn get_evidence(&self, evidence_id: u64) -> Option<EvidenceItem> {
+            self.evidence_items.get(&evidence_id)
+        }
+
+        /// Get all verifications for an evidence item
+        #[ink(message)]
+        pub fn get_evidence_verifications(&self, evidence_id: u64) -> Vec<EvidenceVerification> {
+            self.evidence_verifications
+                .get(&evidence_id)
+                .unwrap_or_default()
+        }
+
+        /// Check if evidence has been verified by majority of verifiers
+        #[ink(message)]
+        pub fn is_evidence_verified(&self, evidence_id: u64) -> bool {
+            let verifications = self
+                .evidence_verifications
+                .get(&evidence_id)
+                .unwrap_or_default();
+            if verifications.is_empty() {
+                return false;
+            }
+
+            let valid_count = verifications.iter().filter(|v| v.is_valid).count();
+            let invalid_count = verifications.len() - valid_count;
+
+            valid_count > invalid_count
+        }
+
+        /// Get evidence verification status summary
+        #[ink(message)]
+        pub fn get_evidence_verification_status(
+            &self,
+            evidence_id: u64,
+        ) -> Option<(u64, u64, u64, bool)> {
+            // Returns (total_verifications, valid_count, invalid_count, is_consensus_valid)
+            let verifications = self
+                .evidence_verifications
+                .get(&evidence_id)
+                .unwrap_or_default();
+            if verifications.is_empty() {
+                return None;
+            }
+
+            let valid_count = verifications.iter().filter(|v| v.is_valid).count() as u64;
+            let invalid_count = verifications.iter().filter(|v| !v.is_valid).count() as u64;
+            let total = verifications.len() as u64;
+            let consensus = valid_count > invalid_count;
+
+            Some((total, valid_count, invalid_count, consensus))
+        }
+
+        /// Batch submit multiple evidence items for a claim (gas optimized)
+        #[ink(message)]
+        pub fn batch_submit_evidence(
+            &mut self,
+            claim_id: u64,
+            evidence_items: Vec<(String, String, Vec<u8>, u64, Option<String>)>,
+        ) -> Result<Vec<u64>, InsuranceError> {
+            let mut evidence_ids = Vec::new();
+
+            for (evidence_type, ipfs_hash, content_hash, file_size, metadata_url) in evidence_items
+            {
+                let evidence_id = self.submit_evidence(
+                    claim_id,
+                    evidence_type,
+                    ipfs_hash,
+                    content_hash,
+                    file_size,
+                    metadata_url,
+                    None, // No description in batch mode
+                )?;
+                evidence_ids.push(evidence_id);
+            }
+
+            Ok(evidence_ids)
+        }
+
+        /// Calculate storage cost for evidence (for fee calculation)
+        #[ink(message)]
+        pub fn calculate_evidence_storage_cost(&self, evidence_id: u64) -> Option<u128> {
+            if let Some(evidence) = self.evidence_items.get(&evidence_id) {
+                // Cost calculation: base cost + size-based cost + verification cost
+                let base_cost: u128 = 1000; // Base storage cost
+                let size_cost: u128 = (evidence.file_size as u128) * 10; // Per byte cost
+                let verification_bonus: u128 = if evidence.verified { 500 } else { 0 };
+
+                Some(base_cost + size_cost + verification_bonus)
+            } else {
+                None
+            }
+        }
+
+        /// Get total storage costs for all evidence in a claim
+        #[ink(message)]
+        pub fn get_claim_evidence_total_cost(&self, claim_id: u64) -> u128 {
+            let evidence_ids = self.claim_evidence.get(&claim_id).unwrap_or_default();
+            let mut total_cost: u128 = 0;
+
+            for evidence_id in evidence_ids {
+                if let Some(cost) = self.calculate_evidence_storage_cost(evidence_id) {
+                    total_cost += cost;
+                }
+            }
+
+            total_cost
+        }
+
+        /// Internal helper: Verify IPFS accessibility (simplified - would use IPFS gateway in production)
+        fn verify_ipfs_accessibility(&self, _ipfs_hash: &str) -> bool {
+            // In production, this would check IPFS gateway accessibility
+            // For now, we accept all valid-format hashes
+            true
+        }
+
+        /// Internal helper: Verify content hash format
+        fn verify_content_hash(&self, hash: &[u8]) -> bool {
+            hash.len() == 32 // SHA-256 hash length
+        }
 
         /// Register a reinsurance agreement (admin only)
         #[ink(message)]
