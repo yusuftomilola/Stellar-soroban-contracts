@@ -1,8 +1,8 @@
-use soroban_sdk::{Address, BytesN, Env, Symbol};
 use crate::{
-    GovernanceContract, GovernanceError, ProposalStatus, GovernanceData, ProposerStats,
-    DATA_KEY, PROPOSAL_KEY, PROPOSER_STATS_KEY
+    GovernanceContract, GovernanceData, GovernanceError, ProposalStatus, ProposerStats, DATA_KEY,
+    PROPOSAL_KEY, PROPOSER_STATS_KEY,
 };
+use soroban_sdk::{Address, BytesN, Env, Symbol};
 
 #[test]
 fn test_initialize() {
@@ -14,17 +14,17 @@ fn test_initialize() {
         &env,
         admin.clone(),
         token_contract,
-        7, // voting_period_days
-        51, // min_voting_percentage
-        10, // min_quorum_percentage
-        100, // min_proposal_deposit
-        5, // max_proposals_per_proposer
+        7,     // voting_period_days
+        51,    // min_voting_percentage
+        10,    // min_quorum_percentage
+        100,   // min_proposal_deposit
+        5,     // max_proposals_per_proposer
         86400, // proposal_cooldown_seconds
-        true, // commit_reveal_enabled
-        1, // commit_period_days
-        1, // reveal_period_days
-        true, // time_lock_enabled
-        3600, // time_lock_seconds
+        true,  // commit_reveal_enabled
+        1,     // commit_period_days
+        1,     // reveal_period_days
+        true,  // time_lock_enabled
+        3600,  // time_lock_seconds
     );
 
     let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap();
@@ -45,7 +45,17 @@ fn test_create_proposal_minimum_deposit() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 86400, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        86400,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Try to create proposal with insufficient deposit
@@ -55,8 +65,8 @@ fn test_create_proposal_minimum_deposit() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[0u8; 32]),
-        51, // threshold_percentage
-        50, // deposit_amount (insufficient)
+        51,   // threshold_percentage
+        50,   // deposit_amount (insufficient)
         None, // commitment
     );
 
@@ -75,7 +85,17 @@ fn test_create_proposal_cooldown() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 10, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        10,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create first proposal
@@ -85,7 +105,9 @@ fn test_create_proposal_cooldown() {
         "Test Proposal 1".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result1.is_ok());
 
@@ -96,7 +118,9 @@ fn test_create_proposal_cooldown() {
         "Test Proposal 2".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[2u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert_eq!(result2, Err(GovernanceError::ProposalTooFrequent));
 }
@@ -114,7 +138,17 @@ fn test_create_proposal_uniqueness() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create first proposal
@@ -124,7 +158,9 @@ fn test_create_proposal_uniqueness() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result1.is_ok());
 
@@ -135,7 +171,9 @@ fn test_create_proposal_uniqueness() {
         "Test Proposal".to_string(), // Same title
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]), // Same execution data
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert_eq!(result2, Err(GovernanceError::ProposalDuplicate));
 }
@@ -152,7 +190,17 @@ fn test_create_proposal_max_per_proposer() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 2, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        2,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create first proposal
@@ -162,7 +210,9 @@ fn test_create_proposal_max_per_proposer() {
         "Test Proposal 1".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result1.is_ok());
 
@@ -173,7 +223,9 @@ fn test_create_proposal_max_per_proposer() {
         "Test Proposal 2".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[2u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result2.is_ok());
 
@@ -184,7 +236,9 @@ fn test_create_proposal_max_per_proposer() {
         "Test Proposal 3".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[3u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert_eq!(result3, Err(GovernanceError::ProposalTooFrequent));
 }
@@ -201,7 +255,17 @@ fn test_commit_reveal_mechanism() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, true, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        true,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create proposal with commitment
@@ -212,7 +276,9 @@ fn test_commit_reveal_mechanism() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, Some(commitment),
+        51,
+        100,
+        Some(commitment),
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -249,7 +315,17 @@ fn test_time_lock_mechanism() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, true, 3600, // 1 hour time-lock
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        true,
+        3600, // 1 hour time-lock
     );
 
     // Create and pass a proposal
@@ -259,7 +335,9 @@ fn test_time_lock_mechanism() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -269,7 +347,8 @@ fn test_time_lock_mechanism() {
     assert!(vote_result.is_ok());
 
     // Simulate time passing
-    env.ledger().set_timestamp(env.ledger().timestamp() + 8 * 86400);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 8 * 86400);
 
     let finalize_result = GovernanceContract::finalize_proposal(&env, proposal_id);
     assert!(finalize_result.is_ok());
@@ -300,7 +379,17 @@ fn test_voting_and_finalization() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create proposal
@@ -310,7 +399,9 @@ fn test_voting_and_finalization() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -327,7 +418,8 @@ fn test_voting_and_finalization() {
     assert_eq!(duplicate_vote, Err(GovernanceError::AlreadyVoted));
 
     // Simulate voting period ending
-    env.ledger().set_timestamp(env.ledger().timestamp() + 8 * 86400);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 8 * 86400);
 
     // Finalize
     let finalize_result = GovernanceContract::finalize_proposal(&env, proposal_id);
@@ -353,7 +445,17 @@ fn test_quorum_not_met() {
         &env,
         admin,
         token_contract,
-        7, 51, 50, 100, 5, 0, false, 1, 1, false, 3600, // 50% quorum
+        7,
+        51,
+        50,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600, // 50% quorum
     );
 
     // Create proposal
@@ -363,7 +465,9 @@ fn test_quorum_not_met() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -373,7 +477,8 @@ fn test_quorum_not_met() {
     assert!(vote_result.is_ok());
 
     // Simulate voting period ending
-    env.ledger().set_timestamp(env.ledger().timestamp() + 8 * 86400);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 8 * 86400);
 
     // Try to finalize (should fail due to quorum not met)
     let finalize_result = GovernanceContract::finalize_proposal(&env, proposal_id);
@@ -392,7 +497,17 @@ fn test_proposer_stats() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Check initial stats
@@ -408,7 +523,9 @@ fn test_proposer_stats() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
 
@@ -431,7 +548,17 @@ fn test_get_active_proposals() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create multiple proposals
@@ -441,7 +568,9 @@ fn test_get_active_proposals() {
         "Test Proposal 1".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result1.is_ok());
 
@@ -451,7 +580,9 @@ fn test_get_active_proposals() {
         "Test Proposal 2".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[2u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result2.is_ok());
 
@@ -472,7 +603,17 @@ fn test_proposal_cleanup() {
         &env,
         admin.clone(),
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create proposal
@@ -482,12 +623,15 @@ fn test_proposal_cleanup() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
 
     // Simulate long time passing (more than cleanup threshold)
-    env.ledger().set_timestamp(env.ledger().timestamp() + 120 * 86400); // 120 days
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 120 * 86400); // 120 days
 
     // Clean up expired proposals
     let cleanup_result = GovernanceContract::cleanup_expired_proposals(&env, admin);
@@ -507,7 +651,17 @@ fn test_cleanup_unauthorized() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Try to clean up with unauthorized address
@@ -527,7 +681,17 @@ fn test_proposal_hash_lookup() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create proposal
@@ -537,7 +701,9 @@ fn test_proposal_hash_lookup() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -572,7 +738,17 @@ fn test_active_proposal_count_decrement() {
         &env,
         admin,
         token_contract,
-        7, 51, 10, 100, 5, 0, false, 1, 1, false, 3600,
+        7,
+        51,
+        10,
+        100,
+        5,
+        0,
+        false,
+        1,
+        1,
+        false,
+        3600,
     );
 
     // Create proposal
@@ -582,7 +758,9 @@ fn test_active_proposal_count_decrement() {
         "Test Proposal".to_string(),
         "Test Description".to_string(),
         BytesN::from_array(&[1u8; 32]),
-        51, 100, None,
+        51,
+        100,
+        None,
     );
     assert!(result.is_ok());
     let proposal_id = result.unwrap();
@@ -596,7 +774,8 @@ fn test_active_proposal_count_decrement() {
     assert!(vote_result.is_ok());
 
     // Simulate voting period ending
-    env.ledger().set_timestamp(env.ledger().timestamp() + 8 * 86400);
+    env.ledger()
+        .set_timestamp(env.ledger().timestamp() + 8 * 86400);
 
     // Finalize (should decrement active count)
     let finalize_result = GovernanceContract::finalize_proposal(&env, proposal_id);

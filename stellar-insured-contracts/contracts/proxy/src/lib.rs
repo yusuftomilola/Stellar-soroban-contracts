@@ -98,7 +98,10 @@ mod propchain_proxy {
                 return Err(Error::InvalidAdmin);
             }
 
-            let accept_after = self.env().block_timestamp().saturating_add(ADMIN_TIMELOCK_SECS);
+            let accept_after = self
+                .env()
+                .block_timestamp()
+                .saturating_add(ADMIN_TIMELOCK_SECS);
             self.pending_admin = Some(new_admin);
             self.admin_transfer_requested_at = Some(self.env().block_timestamp());
             self.renounce_requested_at = None;

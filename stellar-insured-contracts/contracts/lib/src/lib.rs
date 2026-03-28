@@ -2649,7 +2649,11 @@ mod propchain_contracts {
 
         /// Authorize or deauthorize an arbitrator (admin or multisig governance only).
         #[ink(message)]
-        pub fn set_arbitrator(&mut self, account: AccountId, authorized: bool) -> Result<(), Error> {
+        pub fn set_arbitrator(
+            &mut self,
+            account: AccountId,
+            authorized: bool,
+        ) -> Result<(), Error> {
             if self.env().caller() != self.admin {
                 return Err(Error::Unauthorized);
             }

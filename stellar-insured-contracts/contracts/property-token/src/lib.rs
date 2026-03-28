@@ -118,11 +118,11 @@ mod property_token {
         // Slashing ACL: Role -> whether it can slash specific roles
         // slashing_acl: (SlashingRole, Role) -> bool
         slashing_acl: Mapping<(u8, u8), bool>,
-        
+
         // Slashing cooldown: (target, role) -> last slash timestamp
         slashing_cooldowns: Mapping<(AccountId, u8), u64>,
         slashing_cooldown_period: u64, // Default cooldown period in seconds
-        
+
         // Slashing blacklist: account -> whether blacklisted from slashing
         slashing_blacklist: Mapping<AccountId, bool>,
 
@@ -134,7 +134,6 @@ mod property_token {
         annual_review_logs: Mapping<u64, AnnualReviewLog>,
         annual_review_counter: u64,
         role_timelock_seconds: u64, // Timelock period for role transfers
-    }
     }
 
     /// Token ID type alias
@@ -192,12 +191,7 @@ mod property_token {
 
     /// Role information with metadata
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct RoleInfo {
@@ -210,12 +204,7 @@ mod property_token {
 
     /// Role transfer request with timelock
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct RoleTransferRequest {
@@ -229,12 +218,7 @@ mod property_token {
 
     /// Annual review log entry
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct AnnualReviewLog {
@@ -411,12 +395,7 @@ mod property_token {
 
     /// Proposal history entry
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ProposalHistoryEntry {
@@ -434,12 +413,7 @@ mod property_token {
 
     /// Vote history entry
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct VoteHistoryEntry {
@@ -453,12 +427,7 @@ mod property_token {
 
     /// Execution history entry
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct ExecutionHistoryEntry {
@@ -513,12 +482,7 @@ mod property_token {
 
     /// Slashing history entry
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct SlashingHistoryEntry {
@@ -534,12 +498,7 @@ mod property_token {
 
     /// History query response with pagination
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct PaginatedProposalHistory {
@@ -548,12 +507,7 @@ mod property_token {
     }
 
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct PaginatedVoteHistory {
@@ -562,12 +516,7 @@ mod property_token {
     }
 
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct PaginatedExecutionHistory {
@@ -576,12 +525,7 @@ mod property_token {
     }
 
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct PaginatedSlashingHistory {
@@ -591,12 +535,7 @@ mod property_token {
 
     /// Slashing eligibility information
     #[derive(
-        Debug,
-        Clone,
-        PartialEq,
-        scale::Encode,
-        scale::Decode,
-        ink::storage::traits::StorageLayout,
+        Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout,
     )]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct SlashingEligibility {
@@ -1375,7 +1314,7 @@ mod property_token {
                 created_at: self.env().block_timestamp(),
             };
             self.proposals.insert((token_id, counter), &proposal);
-            
+
             // Add to proposal history
             let history_count = self.proposal_history_count.get(token_id).unwrap_or(0);
             let history_entry = ProposalHistoryEntry {
@@ -1390,9 +1329,11 @@ mod property_token {
                 executed_at: None,
                 creator: caller.clone(),
             };
-            self.proposal_history_items.insert((token_id, history_count), &history_entry);
-            self.proposal_history_count.insert(token_id, &(history_count + 1));
-            
+            self.proposal_history_items
+                .insert((token_id, history_count), &history_entry);
+            self.proposal_history_count
+                .insert(token_id, &(history_count + 1));
+
             self.env().emit_event(ProposalCreated {
                 token_id,
                 proposal_id: counter,
@@ -1432,9 +1373,12 @@ mod property_token {
             self.proposals.insert((token_id, proposal_id), &proposal);
             self.votes_cast
                 .insert((token_id, proposal_id, voter), &true);
-            
+
             // Add to vote history
-            let vote_history_count = self.vote_history_count.get((token_id, proposal_id)).unwrap_or(0);
+            let vote_history_count = self
+                .vote_history_count
+                .get((token_id, proposal_id))
+                .unwrap_or(0);
             let vote_entry = VoteHistoryEntry {
                 proposal_id,
                 token_id,
@@ -1443,9 +1387,11 @@ mod property_token {
                 vote_weight: weight,
                 voted_at: self.env().block_timestamp(),
             };
-            self.vote_history_items.insert((token_id, proposal_id, vote_history_count), &vote_entry);
-            self.vote_history_count.insert((token_id, proposal_id), &(vote_history_count + 1));
-            
+            self.vote_history_items
+                .insert((token_id, proposal_id, vote_history_count), &vote_entry);
+            self.vote_history_count
+                .insert((token_id, proposal_id), &(vote_history_count + 1));
+
             self.env().emit_event(Voted {
                 token_id,
                 proposal_id,
@@ -1478,16 +1424,19 @@ mod property_token {
                 ProposalStatus::Rejected
             };
             self.proposals.insert((token_id, proposal_id), &proposal);
-            
+
             // Update proposal history with execution info
-            if let Some(mut history_entry) = self.proposal_history_items.get((token_id, proposal_id)) {
+            if let Some(mut history_entry) =
+                self.proposal_history_items.get((token_id, proposal_id))
+            {
                 history_entry.status = proposal.status.clone();
                 history_entry.executed_at = Some(execution_timestamp);
                 history_entry.for_votes = proposal.for_votes;
                 history_entry.against_votes = proposal.against_votes;
-                self.proposal_history_items.insert((token_id, proposal_id), &history_entry);
+                self.proposal_history_items
+                    .insert((token_id, proposal_id), &history_entry);
             }
-            
+
             // Add to execution history
             let exec_count = self.execution_history_count;
             let executor = self.env().caller();
@@ -1500,9 +1449,10 @@ mod property_token {
                 executor,
                 transaction_hash: tx_hash,
             };
-            self.execution_history_items.insert(&exec_count, &exec_entry);
+            self.execution_history_items
+                .insert(&exec_count, &exec_entry);
             self.execution_history_count = exec_count + 1;
-            
+
             self.env().emit_event(ProposalExecuted {
                 token_id,
                 proposal_id,
@@ -2571,14 +2521,17 @@ mod property_token {
             }
 
             let current_time = self.env().block_timestamp();
-            
+
             // Update compliance flags
-            let mut compliance_info = self.compliance_flags.get(token_id).unwrap_or(ComplianceInfo {
-                verified: true,
-                verification_date: 0,
-                verifier: AccountId::from([0u8; 32]),
-                compliance_type: String::from("Standard"),
-            });
+            let mut compliance_info =
+                self.compliance_flags
+                    .get(token_id)
+                    .unwrap_or(ComplianceInfo {
+                        verified: true,
+                        verification_date: 0,
+                        verifier: AccountId::from([0u8; 32]),
+                        compliance_type: String::from("Standard"),
+                    });
 
             compliance_info.verified = false;
             compliance_info.compliance_type = format!("Under Review: {}", reason);
@@ -2613,7 +2566,7 @@ mod property_token {
             }
 
             let current_time = self.env().block_timestamp();
-            
+
             // Clear compliance flags
             let compliance_info = ComplianceInfo {
                 verified: true,
@@ -3043,12 +2996,12 @@ mod property_token {
             params: PaginationParams,
         ) -> PaginatedProposalHistory {
             let total_count = self.proposal_history_count.get(token_id).unwrap_or(0);
-            
+
             // Calculate pagination
             let offset = params.offset.min(total_count);
             let limit = params.limit.min(100).min(total_count - offset); // Cap at 100
             let mut entries = Vec::new();
-            
+
             // Retrieve entries based on sort order
             if params.sort_ascending {
                 for i in offset..(offset + limit) {
@@ -3070,10 +3023,10 @@ mod property_token {
                     }
                 }
             }
-            
+
             let returned_count = entries.len() as u32;
             let has_more = offset + limit < total_count;
-            
+
             PaginatedProposalHistory {
                 entries,
                 pagination: PaginationInfo {
@@ -3094,13 +3047,16 @@ mod property_token {
             proposal_id: u64,
             params: PaginationParams,
         ) -> PaginatedVoteHistory {
-            let total_count = self.vote_history_count.get((token_id, proposal_id)).unwrap_or(0);
-            
+            let total_count = self
+                .vote_history_count
+                .get((token_id, proposal_id))
+                .unwrap_or(0);
+
             // Calculate pagination
             let offset = params.offset.min(total_count);
             let limit = params.limit.min(100).min(total_count - offset); // Cap at 100
             let mut entries = Vec::new();
-            
+
             // Retrieve entries based on sort order
             if params.sort_ascending {
                 for i in offset..(offset + limit) {
@@ -3122,10 +3078,10 @@ mod property_token {
                     }
                 }
             }
-            
+
             let returned_count = entries.len() as u32;
             let has_more = offset + limit < total_count;
-            
+
             PaginatedVoteHistory {
                 entries,
                 pagination: PaginationInfo {
@@ -3140,17 +3096,14 @@ mod property_token {
 
         /// Enterprise-grade API: Get execution history with pagination
         #[ink(message)]
-        pub fn get_execution_history(
-            &self,
-            params: PaginationParams,
-        ) -> PaginatedExecutionHistory {
+        pub fn get_execution_history(&self, params: PaginationParams) -> PaginatedExecutionHistory {
             let total_count = self.execution_history_count;
-            
+
             // Calculate pagination
             let offset = params.offset.min(total_count);
             let limit = params.limit.min(100).min(total_count - offset); // Cap at 100
             let mut entries = Vec::new();
-            
+
             // Retrieve entries based on sort order
             if params.sort_ascending {
                 for i in offset..(offset + limit) {
@@ -3172,10 +3125,10 @@ mod property_token {
                     }
                 }
             }
-            
+
             let returned_count = entries.len() as u32;
             let has_more = offset + limit < total_count;
-            
+
             PaginatedExecutionHistory {
                 entries,
                 pagination: PaginationInfo {
@@ -3204,15 +3157,15 @@ mod property_token {
             if caller != self.admin {
                 return Err(Error::Unauthorized);
             }
-            
+
             // Check if target is blacklisted from being slashed
             if self.slashing_blacklist.get(&target).unwrap_or(false) {
                 return Err(Error::SlashBlacklisted);
             }
-            
+
             // Convert SlashingRole to u8 for storage key
             let role_id = self.role_to_id(&role);
-            
+
             // Check cooldown period - prevent repeated slashing for same target/role
             let cooldown_key = (target, role_id);
             let last_slash = self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0);
@@ -3220,7 +3173,7 @@ mod property_token {
             if now.saturating_sub(last_slash) < self.slashing_cooldown_period {
                 return Err(Error::SlashCooldownActive);
             }
-            
+
             // Count repeat offenses for history
             let mut repeat_count = 0u32;
             for i in 0..self.slashing_history_count {
@@ -3230,7 +3183,7 @@ mod property_token {
                     }
                 }
             }
-            
+
             // Create slashing history entry
             let tx_hash = Hash::from([0u8; 32]); // In real implementation, get actual tx hash
             let slashing_entry = SlashingHistoryEntry {
@@ -3243,15 +3196,16 @@ mod property_token {
                 authority,
                 repeat_offense_count: repeat_count,
             };
-            
+
             // Store in history
             let history_count = self.slashing_history_count;
-            self.slashing_history_items.insert(&history_count, &slashing_entry);
+            self.slashing_history_items
+                .insert(&history_count, &slashing_entry);
             self.slashing_history_count = history_count + 1;
-            
+
             // Update cooldown timestamp
             self.slashing_cooldowns.insert(&cooldown_key, &now);
-            
+
             // Emit event for slashing
             self.env().emit_event(SlashingRecorded {
                 target,
@@ -3261,10 +3215,10 @@ mod property_token {
                 authority,
                 cooldown_until: now.saturating_add(self.slashing_cooldown_period),
             });
-            
+
             Ok(())
         }
-        
+
         /// Record slashing with explicit role-scope ACL
         /// Only accounts with the required ACL permission can slash specific roles
         #[ink(message)]
@@ -3277,21 +3231,21 @@ mod property_token {
             caller_role: Role,
         ) -> Result<(), Error> {
             let caller = self.env().caller();
-            
+
             // Check if caller has the required ACL permission
             let caller_role_id = self.role_to_id_internal(&caller_role);
             let target_role_id = self.role_to_id(&target_role);
             let acl_key = (caller_role_id, target_role_id);
-            
+
             if !self.slashing_acl.get(&acl_key).unwrap_or(false) {
                 return Err(Error::SlashingACLRequired);
             }
-            
+
             // Check if target is blacklisted from being slashed
             if self.slashing_blacklist.get(&target).unwrap_or(false) {
                 return Err(Error::SlashBlacklisted);
             }
-            
+
             // Check cooldown period
             let cooldown_key = (target, target_role_id);
             let last_slash = self.slashing_cooldowns.get(&cooldown_key).unwrap_or(0);
@@ -3299,7 +3253,7 @@ mod property_token {
             if now.saturating_sub(last_slash) < self.slashing_cooldown_period {
                 return Err(Error::SlashCooldownActive);
             }
-            
+
             // Count repeat offenses
             let mut repeat_count = 0u32;
             for i in 0..self.slashing_history_count {
@@ -3309,7 +3263,7 @@ mod property_token {
                     }
                 }
             }
-            
+
             // Create slashing history entry
             let tx_hash = Hash::from([0u8; 32]);
             let slashing_entry = SlashingHistoryEntry {
@@ -3322,15 +3276,16 @@ mod property_token {
                 authority: caller,
                 repeat_offense_count: repeat_count,
             };
-            
+
             // Store in history
             let history_count = self.slashing_history_count;
-            self.slashing_history_items.insert(&history_count, &slashing_entry);
+            self.slashing_history_items
+                .insert(&history_count, &slashing_entry);
             self.slashing_history_count = history_count + 1;
-            
+
             // Update cooldown timestamp
             self.slashing_cooldowns.insert(&cooldown_key, &now);
-            
+
             // Emit event
             self.env().emit_event(SlashingRecorded {
                 target,
@@ -3340,10 +3295,10 @@ mod property_token {
                 authority: caller,
                 cooldown_until: now.saturating_add(self.slashing_cooldown_period),
             });
-            
+
             Ok(())
         }
-        
+
         /// Set slashing blacklist for an account (admin only)
         #[ink(message)]
         pub fn set_slashing_blacklist(
@@ -3355,18 +3310,18 @@ mod property_token {
             if caller != self.admin {
                 return Err(Error::Unauthorized);
             }
-            
+
             self.slashing_blacklist.insert(&account, &blacklisted);
-            
+
             self.env().emit_event(SlashingBlacklistUpdated {
                 account,
                 blacklisted,
                 updated_by: caller,
             });
-            
+
             Ok(())
         }
-        
+
         /// Get slashing eligibility for a target account
         #[ink(message)]
         pub fn get_slashing_eligibility(
@@ -3376,7 +3331,7 @@ mod property_token {
         ) -> SlashingEligibility {
             // Check if blacklisted
             let is_blacklisted = self.slashing_blacklist.get(&target).unwrap_or(false);
-            
+
             // Check cooldown status
             let role_id = self.role_to_id(&role);
             let cooldown_key = (target, role_id);
@@ -3392,7 +3347,7 @@ mod property_token {
                     self.slashing_cooldown_period.saturating_sub(elapsed)
                 }
             };
-            
+
             SlashingEligibility {
                 target,
                 role,
@@ -3403,7 +3358,7 @@ mod property_token {
                 can_be_slashed: !is_blacklisted && cooldown_remaining == 0,
             }
         }
-        
+
         /// Set slashing cooldown period (admin only)
         #[ink(message)]
         pub fn set_slashing_cooldown(&mut self, period_seconds: u64) -> Result<(), Error> {
@@ -3411,11 +3366,11 @@ mod property_token {
             if caller != self.admin {
                 return Err(Error::Unauthorized);
             }
-            
+
             self.slashing_cooldown_period = period_seconds;
             Ok(())
         }
-        
+
         /// Set slashing ACL for a role (admin only)
         /// slasher_role: the role performing the slashing
         /// target_role: the role being slashed
@@ -3431,23 +3386,23 @@ mod property_token {
             if caller != self.admin {
                 return Err(Error::Unauthorized);
             }
-            
+
             let slasher_role_id = self.role_to_id_internal(&slasher_role);
             let target_role_id = self.role_to_id(&target_role);
             let acl_key = (slasher_role_id, target_role_id);
-            
+
             self.slashing_acl.insert(&acl_key, &allowed);
-            
+
             self.env().emit_event(SlashingACLUpdated {
                 slasher_role,
                 target_role,
                 allowed,
                 updated_by: caller,
             });
-            
+
             Ok(())
         }
-        
+
         /// Check if a role can slash another role
         #[ink(message)]
         pub fn can_role_slash(&self, slasher_role: Role, target_role: SlashingRole) -> bool {
@@ -3456,13 +3411,13 @@ mod property_token {
             let acl_key = (slasher_role_id, target_role_id);
             self.slashing_acl.get(&acl_key).unwrap_or(false)
         }
-        
+
         /// Get slashing cooldown period
         #[ink(message)]
         pub fn get_slashing_cooldown_period(&self) -> u64 {
             self.slashing_cooldown_period
         }
-        
+
         /// Get last slash timestamp for a target and role
         #[ink(message)]
         pub fn get_last_slash_timestamp(&self, target: AccountId, role: SlashingRole) -> u64 {
@@ -3480,42 +3435,52 @@ mod property_token {
             params: PaginationParams,
         ) -> PaginatedSlashingHistory {
             let total_count = self.slashing_history_count;
-            
+
             // Filter entries if filters are provided
             let mut all_entries = Vec::new();
             for i in 0..total_count {
                 if let Some(entry) = self.slashing_history_items.get(&i) {
-                    let matches_target = target.is_none() || entry.target == target.as_ref().unwrap();
+                    let matches_target =
+                        target.is_none() || entry.target == target.as_ref().unwrap();
                     let matches_role = role.is_none() || entry.role == *role.as_ref().unwrap();
-                    
+
                     if matches_target && matches_role {
                         all_entries.push((i, entry));
                     }
                 }
             }
-            
+
             let filtered_total = all_entries.len() as u32;
-            
+
             // Calculate pagination
             let offset = params.offset.min(filtered_total);
             let limit = params.limit.min(100).min(filtered_total - offset); // Cap at 100
             let mut entries = Vec::new();
-            
+
             // Sort by index (which represents chronological order)
             if params.sort_ascending {
-                for (_, entry) in all_entries.iter().skip(offset as usize).take(limit as usize) {
+                for (_, entry) in all_entries
+                    .iter()
+                    .skip(offset as usize)
+                    .take(limit as usize)
+                {
                     entries.push(entry.clone());
                 }
             } else {
                 // Descending order (most recent first)
-                for (_, entry) in all_entries.iter().rev().skip((filtered_total - offset - limit) as usize).take(limit as usize) {
+                for (_, entry) in all_entries
+                    .iter()
+                    .rev()
+                    .skip((filtered_total - offset - limit) as usize)
+                    .take(limit as usize)
+                {
                     entries.push(entry.clone());
                 }
             }
-            
+
             let returned_count = entries.len() as u32;
             let has_more = offset + limit < filtered_total;
-            
+
             PaginatedSlashingHistory {
                 entries,
                 pagination: PaginationInfo {
@@ -3541,7 +3506,7 @@ mod property_token {
             expires_at: Option<u64>,
         ) -> Result<(), Error> {
             let caller = self.env().caller();
-            
+
             // Only admin can grant roles
             if caller != self.admin {
                 return Err(Error::Unauthorized);
@@ -3584,7 +3549,7 @@ mod property_token {
         #[ink(message)]
         pub fn revoke_role(&mut self, account: AccountId, role: Role) -> Result<(), Error> {
             let caller = self.env().caller();
-            
+
             // Only admin can revoke roles
             if caller != self.admin {
                 return Err(Error::Unauthorized);
@@ -3654,12 +3619,9 @@ mod property_token {
 
         /// Request a role transfer with timelock (for Admin role)
         #[ink(message)]
-        pub fn request_admin_transfer(
-            &mut self,
-            new_admin: AccountId,
-        ) -> Result<u64, Error> {
+        pub fn request_admin_transfer(&mut self, new_admin: AccountId) -> Result<u64, Error> {
             let caller = self.env().caller();
-            
+
             // Only current admin can request transfer
             if caller != self.admin {
                 return Err(Error::Unauthorized);
@@ -3679,7 +3641,8 @@ mod property_token {
 
             self.role_transfer_counter += 1;
             let request_id = self.role_transfer_counter;
-            self.role_transfer_requests.insert(request_id, &transfer_request);
+            self.role_transfer_requests
+                .insert(request_id, &transfer_request);
 
             self.env().emit_event(AdminTransferRequested {
                 from: caller,
@@ -3696,7 +3659,7 @@ mod property_token {
         #[ink(message)]
         pub fn execute_admin_transfer(&mut self, request_id: u64) -> Result<(), Error> {
             let caller = self.env().caller();
-            
+
             let mut transfer_request = self
                 .role_transfer_requests
                 .get(request_id)
@@ -3721,7 +3684,8 @@ mod property_token {
             // Transfer admin role
             self.admin = transfer_request.to_account;
             transfer_request.is_executed = true;
-            self.role_transfer_requests.insert(request_id, &transfer_request);
+            self.role_transfer_requests
+                .insert(request_id, &transfer_request);
 
             // Grant Admin role to new admin
             let role_info = RoleInfo {
@@ -3732,15 +3696,21 @@ mod property_token {
                 is_active: true,
             };
 
-            let mut roles = self.role_assignments.get(transfer_request.to_account).unwrap_or_default();
+            let mut roles = self
+                .role_assignments
+                .get(transfer_request.to_account)
+                .unwrap_or_default();
             roles.push(Role::Admin);
-            self.role_assignments.insert(transfer_request.to_account, &roles);
-            self.role_info.insert((transfer_request.to_account, Role::Admin), &role_info);
+            self.role_assignments
+                .insert(transfer_request.to_account, &roles);
+            self.role_info
+                .insert((transfer_request.to_account, Role::Admin), &role_info);
 
             // Revoke Admin role from old admin
             if let Some(mut old_roles) = self.role_assignments.get(transfer_request.from_account) {
                 old_roles.retain(|&r| r != Role::Admin);
-                self.role_assignments.insert(transfer_request.from_account, &old_roles);
+                self.role_assignments
+                    .insert(transfer_request.from_account, &old_roles);
             }
 
             self.env().emit_event(AdminTransferExecuted {
@@ -3757,7 +3727,7 @@ mod property_token {
         #[ink(message)]
         pub fn cancel_admin_transfer(&mut self, request_id: u64) -> Result<(), Error> {
             let caller = self.env().caller();
-            
+
             // Only original requester can cancel
             let transfer_request = self
                 .role_transfer_requests
@@ -3875,7 +3845,7 @@ mod property_token {
         ) -> Vec<AnnualReviewLog> {
             let mut reviews = Vec::new();
             let total = self.annual_review_counter;
-            
+
             // Iterate through logs and filter by account and role
             for i in 1..=total {
                 if let Some(log) = self.annual_review_logs.get(i) {
@@ -3888,7 +3858,7 @@ mod property_token {
             // Apply pagination
             let start = offset as usize;
             let end = core::cmp::min(start + limit as usize, reviews.len());
-            
+
             if start >= reviews.len() {
                 return Vec::new();
             }
@@ -4257,8 +4227,12 @@ mod property_token {
             let token_id = contract
                 .register_property_with_token(metadata)
                 .expect("Token registration should succeed");
-            assert!(contract.issue_shares(token_id, accounts.alice, 1_000).is_ok());
-            assert!(contract.transfer_shares(accounts.alice, accounts.bob, token_id, 400).is_ok());
+            assert!(contract
+                .issue_shares(token_id, accounts.alice, 1_000)
+                .is_ok());
+            assert!(contract
+                .transfer_shares(accounts.alice, accounts.bob, token_id, 400)
+                .is_ok());
             assert_eq!(contract.share_balance_of(accounts.alice, token_id), 600);
             assert_eq!(contract.share_balance_of(accounts.bob, token_id), 400);
 
@@ -4303,13 +4277,8 @@ mod property_token {
             assert_eq!(duplicate_execution, Err(Error::ProposalClosed));
 
             assert!(contract.set_emergency_pause(true).is_ok());
-            let paused_bridge = contract.initiate_bridge_multisig(
-                token_id,
-                2,
-                accounts.charlie,
-                2,
-                None,
-            );
+            let paused_bridge =
+                contract.initiate_bridge_multisig(token_id, 2, accounts.charlie, 2, None);
             assert_eq!(paused_bridge, Err(Error::BridgePaused));
 
             test::set_caller::<DefaultEnvironment>(accounts.bob);
@@ -4334,8 +4303,12 @@ mod property_token {
             let token_id = contract
                 .register_property_with_token(metadata)
                 .expect("Token registration should succeed");
-            assert!(contract.issue_shares(token_id, accounts.alice, 1_000).is_ok());
-            assert!(contract.transfer_shares(accounts.alice, accounts.bob, token_id, 300).is_ok());
+            assert!(contract
+                .issue_shares(token_id, accounts.alice, 1_000)
+                .is_ok());
+            assert!(contract
+                .transfer_shares(accounts.alice, accounts.bob, token_id, 300)
+                .is_ok());
 
             let proposal_id = contract
                 .create_proposal(token_id, 800, Hash::from([7u8; 32]))
@@ -4664,7 +4637,9 @@ mod property_token {
 
             // Admin grants then revokes auditor role
             test::set_caller::<DefaultEnvironment>(accounts.alice);
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
             assert!(contract.has_role(accounts.bob, Role::Auditor));
 
             assert!(contract.revoke_role(accounts.bob, Role::Auditor).is_ok());
@@ -4683,8 +4658,12 @@ mod property_token {
 
             // Grant multiple roles to Bob
             test::set_caller::<DefaultEnvironment>(accounts.alice);
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
-            assert!(contract.grant_role(accounts.bob, Role::LiquidityManager, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::LiquidityManager, None)
+                .is_ok());
 
             let roles = contract.get_roles_for_account(accounts.bob);
             assert_eq!(roles.len(), 2);
@@ -4735,14 +4714,14 @@ mod property_token {
                 .expect("Token registration should succeed");
 
             // Grant auditor role to Bob
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
 
             // Auditor flags token for compliance review
             test::set_caller::<DefaultEnvironment>(accounts.bob);
-            let result = contract.flag_for_compliance_review(
-                token_id,
-                String::from("Suspicious activity detected"),
-            );
+            let result = contract
+                .flag_for_compliance_review(token_id, String::from("Suspicious activity detected"));
             assert!(result.is_ok());
 
             // Verify flag is set
@@ -4752,8 +4731,7 @@ mod property_token {
 
             // Non-auditor tries to flag - should fail
             test::set_caller::<DefaultEnvironment>(accounts.charlie);
-            let result =
-                contract.flag_for_compliance_review(token_id, String::from("Test flag"));
+            let result = contract.flag_for_compliance_review(token_id, String::from("Test flag"));
             assert_eq!(result, Err(Error::Unauthorized));
         }
 
@@ -4775,7 +4753,9 @@ mod property_token {
                 .register_property_with_token(metadata)
                 .expect("Token registration should succeed");
 
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
 
             test::set_caller::<DefaultEnvironment>(accounts.bob);
             assert!(contract
@@ -4783,8 +4763,7 @@ mod property_token {
                 .is_ok());
 
             // Auditor clears the flag
-            let result =
-                contract.clear_compliance_flag(token_id, String::from("Issue resolved"));
+            let result = contract.clear_compliance_flag(token_id, String::from("Issue resolved"));
             assert!(result.is_ok());
 
             // Verify flag is cleared
@@ -4812,7 +4791,9 @@ mod property_token {
                 .expect("Token registration should succeed");
 
             // Grant liquidity manager role to Bob
-            assert!(contract.grant_role(accounts.bob, Role::LiquidityManager, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::LiquidityManager, None)
+                .is_ok());
 
             // Liquidity manager updates dividend parameters
             test::set_caller::<DefaultEnvironment>(accounts.bob);
@@ -4851,10 +4832,14 @@ mod property_token {
                 .register_property_with_token(metadata)
                 .expect("Token registration should succeed");
 
-            assert!(contract.issue_shares(token_id, accounts.alice, 1000).is_ok());
+            assert!(contract
+                .issue_shares(token_id, accounts.alice, 1000)
+                .is_ok());
 
             // Grant governance operator role to Bob
-            assert!(contract.grant_role(accounts.bob, Role::GovernanceOperator, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::GovernanceOperator, None)
+                .is_ok());
 
             // Create a proposal
             let proposal_id = contract
@@ -4947,7 +4932,9 @@ mod property_token {
 
             // Grant auditor role to Bob
             test::set_caller::<DefaultEnvironment>(accounts.alice);
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
 
             // Admin logs annual review for Bob
             let log_id = contract
@@ -4987,7 +4974,9 @@ mod property_token {
 
             // Grant governance operator role to Bob
             test::set_caller::<DefaultEnvironment>(accounts.alice);
-            assert!(contract.grant_role(accounts.bob, Role::GovernanceOperator, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::GovernanceOperator, None)
+                .is_ok());
 
             // Governance operator can pause bridge
             test::set_caller::<DefaultEnvironment>(accounts.bob);
@@ -5027,9 +5016,15 @@ mod property_token {
                 .expect("Should register");
 
             // Grant different roles
-            assert!(contract.grant_role(accounts.bob, Role::Auditor, None).is_ok());
-            assert!(contract.grant_role(accounts.charlie, Role::LiquidityManager, None).is_ok());
-            assert!(contract.grant_role(accounts.david, Role::GovernanceOperator, None).is_ok());
+            assert!(contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .is_ok());
+            assert!(contract
+                .grant_role(accounts.charlie, Role::LiquidityManager, None)
+                .is_ok());
+            assert!(contract
+                .grant_role(accounts.david, Role::GovernanceOperator, None)
+                .is_ok());
 
             // Auditor can flag compliance
             test::set_caller::<DefaultEnvironment>(accounts.bob);
@@ -5045,9 +5040,7 @@ mod property_token {
             );
 
             // Liquidity manager CAN update pool parameters
-            assert!(contract
-                .adjust_pool_risk_parameters(token_id, 10)
-                .is_ok());
+            assert!(contract.adjust_pool_risk_parameters(token_id, 10).is_ok());
 
             // Auditor CANNOT update pool parameters (wrong role)
             test::set_caller::<DefaultEnvironment>(accounts.bob);
@@ -5070,22 +5063,24 @@ mod property_token {
         fn test_record_slashing_with_cooldown() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             let target = accounts.bob;
             let role = SlashingRole::GovernanceParticipant;
             let reason = SlashingReason::GovernanceAttack;
             let slashed_amount = 1000;
-            
+
             // First slash should succeed
             test::set_caller::<DefaultEnvironment>(contract.admin());
-            assert!(contract.record_slashing(
-                target,
-                role.clone(),
-                reason.clone(),
-                slashed_amount,
-                contract.admin(),
-            ).is_ok());
-            
+            assert!(contract
+                .record_slashing(
+                    target,
+                    role.clone(),
+                    reason.clone(),
+                    slashed_amount,
+                    contract.admin(),
+                )
+                .is_ok());
+
             // Second slash immediately should fail due to cooldown
             assert_eq!(
                 contract.record_slashing(
@@ -5103,13 +5098,13 @@ mod property_token {
         fn test_slashing_blacklist() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             let target = accounts.bob;
-            
+
             // Blacklist the target
             test::set_caller::<DefaultEnvironment>(contract.admin());
             assert!(contract.set_slashing_blacklist(target, true).is_ok());
-            
+
             // Slashing should fail due to blacklist
             assert_eq!(
                 contract.record_slashing(
@@ -5121,38 +5116,40 @@ mod property_token {
                 ),
                 Err(Error::SlashBlacklisted)
             );
-            
+
             // Remove from blacklist
             assert!(contract.set_slashing_blacklist(target, false).is_ok());
-            
+
             // Slashing should now succeed
-            assert!(contract.record_slashing(
-                target,
-                SlashingRole::GovernanceParticipant,
-                SlashingReason::GovernanceAttack,
-                1000,
-                contract.admin(),
-            ).is_ok());
+            assert!(contract
+                .record_slashing(
+                    target,
+                    SlashingRole::GovernanceParticipant,
+                    SlashingReason::GovernanceAttack,
+                    1000,
+                    contract.admin(),
+                )
+                .is_ok());
         }
 
         #[ink::test]
         fn test_get_slashing_eligibility() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             let target = accounts.bob;
             let role = SlashingRole::OracleProvider;
-            
+
             // Initial eligibility - should be eligible
             let eligibility = contract.get_slashing_eligibility(target, role.clone());
             assert!(!eligibility.is_blacklisted);
             assert_eq!(eligibility.cooldown_remaining, 0);
             assert!(eligibility.can_be_slashed);
-            
+
             // Blacklist the target
             test::set_caller::<DefaultEnvironment>(contract.admin());
             contract.set_slashing_blacklist(target, true).unwrap();
-            
+
             // Should not be eligible now
             let eligibility = contract.get_slashing_eligibility(target, role.clone());
             assert!(eligibility.is_blacklisted);
@@ -5163,27 +5160,23 @@ mod property_token {
         fn test_slashing_acl() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             // Set ACL: Auditor can slash GovernanceParticipant
             test::set_caller::<DefaultEnvironment>(contract.admin());
-            assert!(contract.set_slashing_acl(
-                Role::Auditor,
-                SlashingRole::GovernanceParticipant,
-                true,
-            ).is_ok());
-            
+            assert!(contract
+                .set_slashing_acl(Role::Auditor, SlashingRole::GovernanceParticipant, true,)
+                .is_ok());
+
             // Verify ACL is set
             assert!(contract.can_role_slash(Role::Auditor, SlashingRole::GovernanceParticipant));
-            
+
             // Verify default ACL is false
             assert!(!contract.can_role_slash(Role::Auditor, SlashingRole::OracleProvider));
-            
+
             // Remove ACL
-            assert!(contract.set_slashing_acl(
-                Role::Auditor,
-                SlashingRole::GovernanceParticipant,
-                false,
-            ).is_ok());
+            assert!(contract
+                .set_slashing_acl(Role::Auditor, SlashingRole::GovernanceParticipant, false,)
+                .is_ok());
             assert!(!contract.can_role_slash(Role::Auditor, SlashingRole::GovernanceParticipant));
         }
 
@@ -5191,28 +5184,30 @@ mod property_token {
         fn test_record_slashing_with_acl() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             // Grant Auditor role to bob
             test::set_caller::<DefaultEnvironment>(contract.admin());
-            contract.grant_role(accounts.bob, Role::Auditor, None).unwrap();
-            
+            contract
+                .grant_role(accounts.bob, Role::Auditor, None)
+                .unwrap();
+
             // Set ACL: Auditor can slash GovernanceParticipant
-            assert!(contract.set_slashing_acl(
-                Role::Auditor,
-                SlashingRole::GovernanceParticipant,
-                true,
-            ).is_ok());
-            
+            assert!(contract
+                .set_slashing_acl(Role::Auditor, SlashingRole::GovernanceParticipant, true,)
+                .is_ok());
+
             // Bob (Auditor) should be able to slash GovernanceParticipant
             test::set_caller::<DefaultEnvironment>(accounts.bob);
-            assert!(contract.record_slashing_with_acl(
-                accounts.charlie,
-                SlashingRole::GovernanceParticipant,
-                SlashingReason::GovernanceAttack,
-                1000,
-                Role::Auditor,
-            ).is_ok());
-            
+            assert!(contract
+                .record_slashing_with_acl(
+                    accounts.charlie,
+                    SlashingRole::GovernanceParticipant,
+                    SlashingReason::GovernanceAttack,
+                    1000,
+                    Role::Auditor,
+                )
+                .is_ok());
+
             // Bob should not be able to slash OracleProvider (no ACL)
             assert_eq!(
                 contract.record_slashing_with_acl(
@@ -5229,14 +5224,14 @@ mod property_token {
         #[ink::test]
         fn test_slashing_cooldown_period() {
             let mut contract = setup_contract();
-            
+
             // Default cooldown should be 86400 (24 hours)
             assert_eq!(contract.get_slashing_cooldown_period(), 86400);
-            
+
             // Set new cooldown period
             test::set_caller::<DefaultEnvironment>(contract.admin());
             assert!(contract.set_slashing_cooldown(3600).is_ok()); // 1 hour
-            
+
             // Verify new cooldown period
             assert_eq!(contract.get_slashing_cooldown_period(), 3600);
         }
@@ -5245,23 +5240,25 @@ mod property_token {
         fn test_get_last_slash_timestamp() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             let target = accounts.bob;
             let role = SlashingRole::RiskPoolProvider;
-            
+
             // Should be 0 initially
             assert_eq!(contract.get_last_slash_timestamp(target, role.clone()), 0);
-            
+
             // Record a slash
             test::set_caller::<DefaultEnvironment>(contract.admin());
-            contract.record_slashing(
-                target,
-                role.clone(),
-                SlashingReason::MaliciousBehavior,
-                500,
-                contract.admin(),
-            ).unwrap();
-            
+            contract
+                .record_slashing(
+                    target,
+                    role.clone(),
+                    SlashingReason::MaliciousBehavior,
+                    500,
+                    contract.admin(),
+                )
+                .unwrap();
+
             // Should now have a timestamp
             let last_slash = contract.get_last_slash_timestamp(target, role.clone());
             assert!(last_slash > 0);
@@ -5271,7 +5268,7 @@ mod property_token {
         fn test_slashing_blacklist_requires_admin() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             // Non-admin should not be able to set blacklist
             test::set_caller::<DefaultEnvironment>(accounts.bob);
             assert_eq!(
@@ -5284,7 +5281,7 @@ mod property_token {
         fn test_slashing_cooldown_requires_admin() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             // Non-admin should not be able to set cooldown
             test::set_caller::<DefaultEnvironment>(accounts.bob);
             assert_eq!(
@@ -5297,15 +5294,12 @@ mod property_token {
         fn test_slashing_acl_requires_admin() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             // Non-admin should not be able to set ACL
             test::set_caller::<DefaultEnvironment>(accounts.bob);
             assert_eq!(
-                contract.set_slashing_acl(
-                    Role::Auditor,
-                    SlashingRole::GovernanceParticipant,
-                    true,
-                ),
+                contract
+                    .set_slashing_acl(Role::Auditor, SlashingRole::GovernanceParticipant, true,),
                 Err(Error::Unauthorized)
             );
         }
@@ -5314,19 +5308,21 @@ mod property_token {
         fn test_slashing_role_cooldowns_are_independent() {
             let mut contract = setup_contract();
             let accounts = test::default_accounts::<DefaultEnvironment>();
-            
+
             let target = accounts.bob;
-            
+
             // Slash for GovernanceParticipant role
             test::set_caller::<DefaultEnvironment>(contract.admin());
-            contract.record_slashing(
-                target,
-                SlashingRole::GovernanceParticipant,
-                SlashingReason::GovernanceAttack,
-                1000,
-                contract.admin(),
-            ).unwrap();
-            
+            contract
+                .record_slashing(
+                    target,
+                    SlashingRole::GovernanceParticipant,
+                    SlashingReason::GovernanceAttack,
+                    1000,
+                    contract.admin(),
+                )
+                .unwrap();
+
             // Slashing GovernanceParticipant again should fail
             assert_eq!(
                 contract.record_slashing(
@@ -5338,15 +5334,17 @@ mod property_token {
                 ),
                 Err(Error::SlashCooldownActive)
             );
-            
+
             // Slashing OracleProvider should succeed (different role = different cooldown)
-            assert!(contract.record_slashing(
-                target,
-                SlashingRole::OracleProvider,
-                SlashingReason::OracleManipulation,
-                1000,
-                contract.admin(),
-            ).is_ok());
+            assert!(contract
+                .record_slashing(
+                    target,
+                    SlashingRole::OracleProvider,
+                    SlashingReason::OracleManipulation,
+                    1000,
+                    contract.admin(),
+                )
+                .is_ok());
         }
     }
 }

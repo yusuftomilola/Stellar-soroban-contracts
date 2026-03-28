@@ -17,8 +17,9 @@ All events share a common `PolicyContext` structure:
 | `coverage_amount` | `i128`    | Total coverage value (stroops)              |
 | `premium_amount`  | `i128`    | Amount paid for the policy                  |
 | `duration_days`   | `u32`     | Validity period in days                     |
-| `policy_type`     | `Symbol`  | Category (e.g., "Life", "Auto", "Property") |
+| `policy_type`     | `Symbol`  | Category (e.g., "STD", "PRM", "ENT")        |
 | `timestamp`       | `u64`     | Ledger epoch timestamp of the action        |
+| `status`          | `PolicyStatus` | Current status: Active, Renewed, Cancelled, Expired |
 
 ---
 
@@ -26,12 +27,78 @@ All events share a common `PolicyContext` structure:
 
 Events are published using a multi-topic format: `(ContractAddress, EventCategory, Action)`.
 
-| Action           | Enum Variant     | Topic 1 (Category) | Topic 2 (Action)     |
-| :--------------- | :--------------- | :----------------- | :------------------- |
-| **Issuance**     | `PolicyIssued`   | `Symbol("policy")` | `Symbol("issued")`   |
-| **Renewal**      | `PolicyRenewed`  | `Symbol("policy")` | `Symbol("renewed")`  |
-| **Cancellation** | `PolicyCanceled` | `Symbol("policy")` | `Symbol("canceled")` |
-| **Expiration**   | `PolicyExpired`  | `Symbol("policy")` | `Symbol("expired")`  |
+#### 1. Policy Issued Event
+
+**Enum Variant:** `PolicyIssued(PolicyContext)`
+
+**Topics:** `["POLICY", "ISSUED"]`
+
+**Description:** Emitted when a new insurance policy is created and activated.
+
+**Data Fields:**
+- `policy_id`: Unique policy identifier
+- `holder`: Policy holder's Stellar address
+- `coverage_amount`: Total coverage amount in stroops
+- `premium_amount`: Premium paid for the policy
+- `duration_days`: Policy duration in days
+- `policy_type`: Type of policy (e.g., STD for Standard)
+- `timestamp`: Block timestamp when issued
+- `status`: Set to `Active`
+
+#### 2. Policy Renewed Event
+
+**Enum Variant:** `PolicyRenewed(PolicyContext)`
+
+**Topics:** `["POLICY", "RENEWED"]`
+
+**Description:** Emitted when an existing policy is renewed with updated terms.
+
+**Data Fields:**
+- `policy_id`: Unique policy identifier
+- `holder`: Policy holder's Stellar address
+- `coverage_amount`: Current coverage amount
+- `premium_amount`: New premium amount
+- `duration_days`: Updated duration in days
+- `policy_type`: Policy type indicator
+- `timestamp`: Block timestamp when renewed
+- `status`: Set to `Renewed`
+
+#### 3. Policy Canceled Event
+
+**Enum Variant:** `PolicyCanceled(PolicyContext, Option<String>)`
+
+**Topics:** `["POLICY", "CANCELED"]`
+
+**Description:** Emitted when a policy is canceled before its expiration.
+
+**Data Fields:**
+- `policy_id`: Unique policy identifier
+- `holder`: Policy holder's Stellar address
+- `coverage_amount`: Coverage amount at cancellation
+- `premium_amount`: Premium amount at cancellation
+- `duration_days`: Original duration
+- `policy_type`: Set to "CANCEL"
+- `timestamp`: Block timestamp when canceled
+- `status`: Set to `Cancelled`
+- `cancellation_reason`: Optional reason for cancellation
+
+#### 4. Policy Expired Event
+
+**Enum Variant:** `PolicyExpired(PolicyContext)`
+
+**Topics:** `["POLICY", "EXPIRED"]`
+
+**Description:** Emitted when a policy reaches its natural expiration.
+
+**Data Fields:**
+- `policy_id`: Unique policy identifier
+- `holder`: Policy holder's Stellar address
+- `coverage_amount`: Final coverage amount
+- `premium_amount`: Final premium amount
+- `duration_days`: Original duration
+- `policy_type`: Policy type indicator
+- `timestamp`: Block timestamp when expired
+- `status`: Set to `Expired`
 
 ---
 

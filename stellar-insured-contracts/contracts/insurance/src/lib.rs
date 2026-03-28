@@ -1265,11 +1265,12 @@ mod propchain_insurance {
                     // Minimum viable auto-verification:
                     // In production, we'd use a cross-contract call here.
                     // For MVP/Test vectors, we trigger a status change and emit an event.
-                    
+
                     // Simulate oracle check - if event ID is 101, it's auto-approved (Test Vector)
                     if evt_id == 101 {
                         self.claims.insert(&claim_id, &claim);
-                        let mut policy_claims = self.policy_claims.get(&policy_id).unwrap_or_default();
+                        let mut policy_claims =
+                            self.policy_claims.get(&policy_id).unwrap_or_default();
                         policy_claims.push(claim_id);
                         self.policy_claims.insert(&policy_id, &policy_claims);
 
@@ -3086,7 +3087,10 @@ mod insurance_tests {
         assert_eq!(pool_after_issue.active_policies, 1);
         assert_eq!(pool_after_issue.total_premiums_collected, pool_share);
         assert_eq!(pool_after_issue.available_capital, deposit + pool_share);
-        assert_eq!(contract.get_pending_rewards(pool_id, accounts.alice), pool_share);
+        assert_eq!(
+            contract.get_pending_rewards(pool_id, accounts.alice),
+            pool_share
+        );
 
         test::set_caller::<DefaultEnvironment>(accounts.charlie);
         let unauthorized_pre_transfer = contract.submit_claim(
@@ -3166,7 +3170,10 @@ mod insurance_tests {
             pool_after_payout.available_capital,
             deposit + pool_share - payout
         );
-        assert_eq!(contract.get_pending_rewards(pool_id, accounts.alice), pool_share);
+        assert_eq!(
+            contract.get_pending_rewards(pool_id, accounts.alice),
+            pool_share
+        );
 
         let max_withdrawable_principal = pool_after_payout
             .available_capital
@@ -3262,17 +3269,16 @@ mod insurance_tests {
 
         test::set_block_timestamp::<DefaultEnvironment>(policy_after_rejection.end_time + 1);
         test::set_caller::<DefaultEnvironment>(accounts.bob);
-        let expired_claim = contract.submit_claim(
-            policy_id,
-            claim_amount,
-            "Too late".into(),
-            valid_evidence(),
-        );
+        let expired_claim =
+            contract.submit_claim(policy_id, claim_amount, "Too late".into(), valid_evidence());
         assert_eq!(expired_claim, Err(InsuranceError::PolicyExpired));
 
         let second_review_attempt =
             contract.process_claim(claim_id, true, "ipfs://oracle-late".into(), String::new());
-        assert_eq!(second_review_attempt, Err(InsuranceError::ClaimAlreadyProcessed));
+        assert_eq!(
+            second_review_attempt,
+            Err(InsuranceError::ClaimAlreadyProcessed)
+        );
     }
 
     // =========================================================================

@@ -1,9 +1,8 @@
+use sha2::{Digest, Sha256};
 use soroban_sdk::{
-    contracttype, contracterror, contractimpl,
-    env, Address, Symbol, Vec, Map, U256, 
-    BytesN, unwrap_or_panic
+    contracterror, contractimpl, contracttype, env, unwrap_or_panic, Address, BytesN, Map, Symbol,
+    Vec, U256,
 };
-use sha2::{Sha256, Digest};
 
 #[cfg(test)]
 mod tests;
@@ -64,7 +63,7 @@ pub struct Proposal {
     pub deposit_amount: i128,
     pub created_at: u64,
     pub voting_deadline: u64,
-    pub reveal_deadline: Option<u64>, // For commit-reveal
+    pub reveal_deadline: Option<u64>,  // For commit-reveal
     pub time_lock_expiry: Option<u64>, // For time-lock
     pub status: ProposalStatus,
     pub yes_votes: i128,
@@ -236,7 +235,7 @@ impl GovernanceContract {
         // Check proposer cooldown
         let proposer_key = (PROPOSER_STATS_KEY, proposer.clone());
         let proposer_stats: Option<ProposerStats> = env.storage().persistent().get(&proposer_key);
-        
+
         if let Some(stats) = proposer_stats {
             let current_time = env.ledger().timestamp();
             if current_time < stats.last_proposal_at + data.proposal_cooldown_seconds as u64 {
@@ -294,10 +293,10 @@ impl GovernanceContract {
             voting_deadline,
             reveal_deadline,
             time_lock_expiry,
-            status: if data.commit_reveal_enabled { 
-                ProposalStatus::Committed 
-            } else { 
-                ProposalStatus::Active 
+            status: if data.commit_reveal_enabled {
+                ProposalStatus::Committed
+            } else {
+                ProposalStatus::Active
             },
             yes_votes: 0,
             no_votes: 0,
@@ -309,7 +308,9 @@ impl GovernanceContract {
         env.storage().persistent().set(&proposal_key, &proposal);
 
         // Store proposal hash for uniqueness check
-        env.storage().persistent().set(&hashes_key, &data.next_proposal_id);
+        env.storage()
+            .persistent()
+            .set(&hashes_key, &data.next_proposal_id);
 
         // Update proposer stats
         let new_stats = ProposerStats {
@@ -338,13 +339,16 @@ impl GovernanceContract {
         reveal: BytesN<32>,
     ) -> Result<(), GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
-        
+
         if !data.commit_reveal_enabled {
             return Err(GovernanceError::InvalidCommitReveal);
         }
 
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let mut proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let mut proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         if proposal.status != ProposalStatus::Committed {
@@ -363,7 +367,10 @@ impl GovernanceContract {
         }
 
         let commit_key = (COMMIT_REVEAL_KEY, proposal_id);
-        let mut commit_reveal: CommitReveal = env.storage().persistent().get(&commit_key)
+        let mut commit_reveal: CommitReveal = env
+            .storage()
+            .persistent()
+            .get(&commit_key)
             .unwrap_or_panic_with(GovernanceError::InvalidCommitReveal);
 
         // Verify the reveal matches the commitment
@@ -398,7 +405,10 @@ impl GovernanceContract {
         }
 
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let mut proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let mut proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         if proposal.status != ProposalStatus::Active {
@@ -440,13 +450,13 @@ impl GovernanceContract {
     }
 
     // Finalize a proposal
-    pub fn finalize_proposal(
-        env: &Env,
-        proposal_id: u64,
-    ) -> Result<(), GovernanceError> {
+    pub fn finalize_proposal(env: &Env, proposal_id: u64) -> Result<(), GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let mut proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let mut proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         if proposal.status == ProposalStatus::Executed {
@@ -461,7 +471,7 @@ impl GovernanceContract {
         // Check if this is a pause/unpause proposal by checking execution data
         let is_pause_proposal = Self::is_pause_proposal(&proposal.execution_data);
         let is_unpause_proposal = Self::is_unpause_proposal(&proposal.execution_data);
-        
+
         // Use appropriate quorum for pause/unpause proposals
         let quorum_percentage = if is_pause_proposal || is_unpause_proposal {
             data.pause_quorum_percentage
@@ -488,7 +498,10 @@ impl GovernanceContract {
 
         // Decrement active proposal count for proposer
         let proposer_key = (PROPOSER_STATS_KEY, proposal.proposer.clone());
-        let mut proposer_stats: ProposerStats = env.storage().persistent().get(&proposer_key)
+        let mut proposer_stats: ProposerStats = env
+            .storage()
+            .persistent()
+            .get(&proposer_key)
             .unwrap_or(ProposerStats {
                 active_proposal_count: 1,
                 total_proposal_count: 1,
@@ -497,20 +510,22 @@ impl GovernanceContract {
         if proposer_stats.active_proposal_count > 0 {
             proposer_stats.active_proposal_count -= 1;
         }
-        env.storage().persistent().set(&proposer_key, &proposer_stats);
+        env.storage()
+            .persistent()
+            .set(&proposer_key, &proposer_stats);
 
         env.storage().persistent().set(&proposal_key, &proposal);
         Ok(())
     }
 
     // Execute a proposal
-    pub fn execute_proposal(
-        env: &Env,
-        proposal_id: u64,
-    ) -> Result<(), GovernanceError> {
+    pub fn execute_proposal(env: &Env, proposal_id: u64) -> Result<(), GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let mut proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let mut proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         if proposal.status != ProposalStatus::Passed {
@@ -520,7 +535,7 @@ impl GovernanceContract {
         // Check if contract is paused (but allow pause/unpause proposals to execute)
         let is_pause_proposal = Self::is_pause_proposal(&proposal.execution_data);
         let is_unpause_proposal = Self::is_unpause_proposal(&proposal.execution_data);
-        
+
         if Self::is_paused(env) && !is_unpause_proposal {
             return Err(GovernanceError::ContractAlreadyPaused);
         }
@@ -550,7 +565,7 @@ impl GovernanceContract {
         hasher.update(title.as_bytes());
         hasher.update(execution_data.as_slice());
         let result = hasher.finalize();
-        
+
         let mut hash_bytes = [0u8; 32];
         hash_bytes.copy_from_slice(&result);
         BytesN::from_array(&hash_bytes)
@@ -561,7 +576,7 @@ impl GovernanceContract {
         let mut hasher = Sha256::new();
         hasher.update(data.as_slice());
         let result = hasher.finalize();
-        
+
         let mut hash_bytes = [0u8; 32];
         hash_bytes.copy_from_slice(&result);
         BytesN::from_array(&hash_bytes)
@@ -570,13 +585,17 @@ impl GovernanceContract {
     // Query functions
     pub fn get_proposal(env: &Env, proposal_id: u64) -> Result<Proposal, GovernanceError> {
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        env.storage().persistent().get(&proposal_key)
+        env.storage()
+            .persistent()
+            .get(&proposal_key)
             .ok_or(GovernanceError::ProposalNotFound)
     }
 
     pub fn get_proposer_stats(env: &Env, proposer: Address) -> ProposerStats {
         let proposer_key = (PROPOSER_STATS_KEY, proposer);
-        env.storage().persistent().get(&proposer_key)
+        env.storage()
+            .persistent()
+            .get(&proposer_key)
             .unwrap_or(ProposerStats {
                 active_proposal_count: 0,
                 total_proposal_count: 0,
@@ -602,7 +621,7 @@ impl GovernanceContract {
     // Clean up expired proposals (admin only)
     pub fn cleanup_expired_proposals(env: &Env, admin: Address) -> Result<u64, GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
-        
+
         if admin != data.admin {
             return Err(GovernanceError::NotAuthorized);
         }
@@ -613,9 +632,17 @@ impl GovernanceContract {
         for i in 1..data.next_proposal_id {
             if let Ok(mut proposal) = Self::get_proposal(env, i) {
                 let should_cleanup = match proposal.status {
-                    ProposalStatus::Active => current_time > proposal.voting_deadline + (30 * 86400), // 30 days after voting deadline
-                    ProposalStatus::Committed => current_time > proposal.reveal_deadline.unwrap_or(proposal.voting_deadline) + (30 * 86400),
-                    ProposalStatus::Passed | ProposalStatus::Rejected => current_time > proposal.voting_deadline + (90 * 86400), // 90 days after voting deadline
+                    ProposalStatus::Active => {
+                        current_time > proposal.voting_deadline + (30 * 86400)
+                    } // 30 days after voting deadline
+                    ProposalStatus::Committed => {
+                        current_time
+                            > proposal.reveal_deadline.unwrap_or(proposal.voting_deadline)
+                                + (30 * 86400)
+                    }
+                    ProposalStatus::Passed | ProposalStatus::Rejected => {
+                        current_time > proposal.voting_deadline + (90 * 86400)
+                    } // 90 days after voting deadline
                     ProposalStatus::Executed => false, // Keep executed proposals
                 };
 
@@ -632,7 +659,11 @@ impl GovernanceContract {
     }
 
     // Get proposal by hash (for duplicate checking)
-    pub fn get_proposal_by_hash(env: &Env, title: String, execution_data: BytesN<32>) -> Option<u64> {
+    pub fn get_proposal_by_hash(
+        env: &Env,
+        title: String,
+        execution_data: BytesN<32>,
+    ) -> Option<u64> {
         let proposal_hash = Self::generate_proposal_hash(&title, &execution_data);
         let hashes_key = (PROPOSAL_HASHES_KEY, proposal_hash);
         env.storage().persistent().get(&hashes_key)
@@ -651,17 +682,17 @@ impl GovernanceContract {
         reason: String,
     ) -> Result<u64, GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
-        
+
         // Check minimum deposit
         if data.min_proposal_deposit > 0 {
             // For pause proposals, we might require higher deposit
             let pause_deposit = data.min_proposal_deposit * 2; // Double deposit for emergency proposals
-            // Note: In a real implementation, you'd check the token balance here
+                                                               // Note: In a real implementation, you'd check the token balance here
         }
 
         // Create pause-specific execution data
         let execution_data = Self::generate_pause_execution_data(&reason);
-        
+
         // Create proposal with pause-specific threshold
         Self::create_proposal(
             env,
@@ -671,7 +702,7 @@ impl GovernanceContract {
             execution_data,
             data.pause_threshold_percentage,
             data.min_proposal_deposit * 2, // Higher deposit for emergency proposals
-            None, // No commitment for pause proposals
+            None,                          // No commitment for pause proposals
         )
     }
 
@@ -684,7 +715,7 @@ impl GovernanceContract {
         reason: String,
     ) -> Result<u64, GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
-        
+
         // Check minimum deposit
         if data.min_proposal_deposit > 0 {
             let pause_deposit = data.min_proposal_deposit * 2;
@@ -693,7 +724,7 @@ impl GovernanceContract {
 
         // Create unpause-specific execution data
         let execution_data = Self::generate_unpause_execution_data(&reason);
-        
+
         // Create proposal with pause-specific threshold
         Self::create_proposal(
             env,
@@ -715,7 +746,10 @@ impl GovernanceContract {
     ) -> Result<(), GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         // Verify proposal is passed
@@ -724,13 +758,16 @@ impl GovernanceContract {
         }
 
         // Check if already paused
-        let pause_state: PauseState = env.storage().instance().get(&PAUSE_STATE_KEY)
-            .unwrap_or(PauseState {
-                is_paused: false,
-                paused_at: None,
-                paused_by: None,
-                pause_reason: None,
-            });
+        let pause_state: PauseState =
+            env.storage()
+                .instance()
+                .get(&PAUSE_STATE_KEY)
+                .unwrap_or(PauseState {
+                    is_paused: false,
+                    paused_at: None,
+                    paused_by: None,
+                    pause_reason: None,
+                });
 
         if pause_state.is_paused {
             return Err(GovernanceError::ContractAlreadyPaused);
@@ -745,7 +782,9 @@ impl GovernanceContract {
             pause_reason: Some(reason.clone()),
         };
 
-        env.storage().instance().set(&PAUSE_STATE_KEY, &new_pause_state);
+        env.storage()
+            .instance()
+            .set(&PAUSE_STATE_KEY, &new_pause_state);
 
         // Add to pause history
         Self::add_pause_history_entry(
@@ -759,7 +798,9 @@ impl GovernanceContract {
         // Mark proposal as executed
         let mut updated_proposal = proposal;
         updated_proposal.status = ProposalStatus::Executed;
-        env.storage().persistent().set(&proposal_key, &updated_proposal);
+        env.storage()
+            .persistent()
+            .set(&proposal_key, &updated_proposal);
 
         Ok(())
     }
@@ -772,7 +813,10 @@ impl GovernanceContract {
     ) -> Result<(), GovernanceError> {
         let data: GovernanceData = env.storage().instance().get(&DATA_KEY).unwrap_or_panic();
         let proposal_key = (PROPOSAL_KEY, proposal_id);
-        let proposal: Proposal = env.storage().persistent().get(&proposal_key)
+        let proposal: Proposal = env
+            .storage()
+            .persistent()
+            .get(&proposal_key)
             .unwrap_or_panic_with(GovernanceError::ProposalNotFound);
 
         // Verify proposal is passed
@@ -781,13 +825,16 @@ impl GovernanceContract {
         }
 
         // Check if not paused
-        let pause_state: PauseState = env.storage().instance().get(&PAUSE_STATE_KEY)
-            .unwrap_or(PauseState {
-                is_paused: false,
-                paused_at: None,
-                paused_by: None,
-                pause_reason: None,
-            });
+        let pause_state: PauseState =
+            env.storage()
+                .instance()
+                .get(&PAUSE_STATE_KEY)
+                .unwrap_or(PauseState {
+                    is_paused: false,
+                    paused_at: None,
+                    paused_by: None,
+                    pause_reason: None,
+                });
 
         if !pause_state.is_paused {
             return Err(GovernanceError::ContractNotPaused);
@@ -801,7 +848,9 @@ impl GovernanceContract {
             pause_reason: None,
         };
 
-        env.storage().instance().set(&PAUSE_STATE_KEY, &new_pause_state);
+        env.storage()
+            .instance()
+            .set(&PAUSE_STATE_KEY, &new_pause_state);
 
         // Add to pause history
         Self::add_pause_history_entry(
@@ -815,26 +864,33 @@ impl GovernanceContract {
         // Mark proposal as executed
         let mut updated_proposal = proposal;
         updated_proposal.status = ProposalStatus::Executed;
-        env.storage().persistent().set(&proposal_key, &updated_proposal);
+        env.storage()
+            .persistent()
+            .set(&proposal_key, &updated_proposal);
 
         Ok(())
     }
 
     // Check if contract is paused (guard function)
     pub fn is_paused(env: &Env) -> bool {
-        let pause_state: PauseState = env.storage().instance().get(&PAUSE_STATE_KEY)
-            .unwrap_or(PauseState {
-                is_paused: false,
-                paused_at: None,
-                paused_by: None,
-                pause_reason: None,
-            });
+        let pause_state: PauseState =
+            env.storage()
+                .instance()
+                .get(&PAUSE_STATE_KEY)
+                .unwrap_or(PauseState {
+                    is_paused: false,
+                    paused_at: None,
+                    paused_by: None,
+                    pause_reason: None,
+                });
         pause_state.is_paused
     }
 
     // Get current pause status
     pub fn get_pause_status(env: &Env) -> PauseState {
-        env.storage().instance().get(&PAUSE_STATE_KEY)
+        env.storage()
+            .instance()
+            .get(&PAUSE_STATE_KEY)
             .unwrap_or(PauseState {
                 is_paused: false,
                 paused_at: None,
@@ -845,7 +901,9 @@ impl GovernanceContract {
 
     // Get pause history
     pub fn get_pause_history(env: &Env) -> Vec<PauseHistoryEntry> {
-        env.storage().persistent().get(&PAUSE_HISTORY_KEY)
+        env.storage()
+            .persistent()
+            .get(&PAUSE_HISTORY_KEY)
             .unwrap_or(Vec::new(env))
     }
 
@@ -859,7 +917,7 @@ impl GovernanceContract {
         hasher.update(b"PAUSE:");
         hasher.update(reason.as_bytes());
         let result = hasher.finalize();
-        
+
         let mut hash_bytes = [0u8; 32];
         hash_bytes.copy_from_slice(&result);
         BytesN::from_array(&hash_bytes)
@@ -871,7 +929,7 @@ impl GovernanceContract {
         hasher.update(b"UNPAUSE:");
         hasher.update(reason.as_bytes());
         let result = hasher.finalize();
-        
+
         let mut hash_bytes = [0u8; 32];
         hash_bytes.copy_from_slice(&result);
         BytesN::from_array(&hash_bytes)
@@ -885,7 +943,10 @@ impl GovernanceContract {
         reason: Option<String>,
         proposal_id: Option<u64>,
     ) {
-        let mut history: Vec<PauseHistoryEntry> = env.storage().persistent().get(&PAUSE_HISTORY_KEY)
+        let mut history: Vec<PauseHistoryEntry> = env
+            .storage()
+            .persistent()
+            .get(&PAUSE_HISTORY_KEY)
             .unwrap_or(Vec::new(env));
 
         let entry = PauseHistoryEntry {
@@ -905,14 +966,14 @@ impl GovernanceContract {
         let mut hasher = Sha256::new();
         hasher.update(b"PAUSE:");
         let prefix_hash = hasher.finalize();
-        
+
         // Check if execution_data starts with PAUSE: prefix
         let execution_slice = execution_data.as_slice();
         if execution_slice.len() >= 32 {
             let mut test_hasher = Sha256::new();
             test_hasher.update(b"PAUSE:");
             let result = test_hasher.finalize();
-            
+
             // Simple check: compare first 16 bytes to detect PAUSE prefix
             for i in 0..16 {
                 if execution_slice[i] != result[i] {
@@ -930,14 +991,14 @@ impl GovernanceContract {
         let mut hasher = Sha256::new();
         hasher.update(b"UNPAUSE:");
         let prefix_hash = hasher.finalize();
-        
+
         // Check if execution_data starts with UNPAUSE: prefix
         let execution_slice = execution_data.as_slice();
         if execution_slice.len() >= 32 {
             let mut test_hasher = Sha256::new();
             test_hasher.update(b"UNPAUSE:");
             let result = test_hasher.finalize();
-            
+
             // Simple check: compare first 16 bytes to detect UNPAUSE prefix
             for i in 0..16 {
                 if execution_slice[i] != result[i] {
