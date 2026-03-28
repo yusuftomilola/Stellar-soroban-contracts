@@ -9,6 +9,10 @@ pub enum PolicyError {
     PolicyNotFound = 4,
 }
 
+// Admin/Guardian storage keys
+const ADMIN_KEY: Symbol = Symbol::short("ADMIN");
+const GUARDIAN_KEY: Symbol = Symbol::short("GUARDIAN");
+
 // Pause state key
 const PAUSE_STATE_KEY: Symbol = Symbol::short("PAUSED");
 
@@ -35,6 +39,8 @@ pub enum PolicyEvent {
     PolicyRenewed(PolicyContext),
     PolicyCanceled(PolicyContext, Option<String>),
     PolicyExpired(PolicyContext),
+    ContractPaused(Address, Option<String>),
+    ContractUnpaused(Address, Option<String>),
 }
 
 #[contracttype]
@@ -58,42 +64,95 @@ pub enum PolicyStatus {
     Cancelled,
     Expired,
 }
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RiskReport {
+    pub property_id: u64,
+    pub risk_score: u32,       // 0-100
+    pub location_factor: u32,  // 100 = 1.0x
+    pub construction_type: Symbol, // e.g. "WOOD", "BRICK", "CONCRETE"
+    pub coverage_ratio: u32,   // basis points
+}
 
 pub struct PolicyContract;
 
 #[contractimpl]
 impl PolicyContract {
-    // Initialize pause state
-    pub fn initialize_pause(env: &Env) {
-        if !env.storage().instance().has(&PAUSE_STATE_KEY) {
-            let pause_state = PauseState {
-                is_paused: false,
-                paused_at: None,
-                paused_by: None,
-                pause_reason: None,
-            };
-            env.storage().instance().set(&PAUSE_STATE_KEY, &pause_state);
+    // Initialize contract with admin and guardian
+    pub fn initialize(env: &Env, admin: Address, guardian: Address) {
+        if env.storage().instance().has(&ADMIN_KEY) {
+            panic!("Already initialized");
         }
+        env.storage().instance().set(&ADMIN_KEY, &admin);
+        env.storage().instance().set(&GUARDIAN_KEY, &guardian);
 
-        // Initialize policy count
-        if !env.storage().instance().has(&POLICY_COUNT_KEY) {
-            env.storage().instance().set(&POLICY_COUNT_KEY, &0u64);
-        }
+        let pause_state = PauseState {
+            is_paused: false,
+            paused_at: None,
+            paused_by: None,
+            pause_reason: None,
+        };
+        env.storage().instance().set(&PAUSE_STATE_KEY, &pause_state);
+        env.storage().instance().set(&POLICY_COUNT_KEY, &0u64);
     }
 
-    // Set pause state (only callable by governance)
-    pub fn set_pause_state(env: &Env, is_paused: bool, reason: Option<String>) {
-        let caller = env.current_contract_address(); // In real implementation, check governance authorization
-        let current_time = env.ledger().timestamp();
+    // Set pause state (only callable by admin or guardian)
+    pub fn set_pause_state(env: &Env, caller: Address, is_paused: bool, reason: Option<String>) -> Result<(), PolicyError> {
+        caller.require_auth();
+        
+        let admin: Address = env.storage().instance().get(&ADMIN_KEY).unwrap();
+        let guardian: Address = env.storage().instance().get(&GUARDIAN_KEY).unwrap();
 
+        if caller != admin && caller != guardian {
+            return Err(PolicyError::Unauthorized);
+        }
+
+        let current_time = env.ledger().timestamp();
         let pause_state = PauseState {
             is_paused,
             paused_at: if is_paused { Some(current_time) } else { None },
-            paused_by: if is_paused { Some(caller) } else { None },
-            pause_reason: reason,
+            paused_by: if is_paused { Some(caller.clone()) } else { None },
+            pause_reason: reason.clone(),
         };
 
         env.storage().instance().set(&PAUSE_STATE_KEY, &pause_state);
+
+        // Emit events
+        if is_paused {
+            env.events().publish(
+                (Symbol::short("PAUSE"), Symbol::short("PAUSED")),
+                PolicyEvent::ContractPaused(caller, reason),
+            );
+        } else {
+            env.events().publish(
+                (Symbol::short("PAUSE"), Symbol::short("UNPAUSED")),
+                PolicyEvent::ContractUnpaused(caller, reason),
+            );
+        }
+
+        Ok(())
+    }
+
+    // Calculate premium based on risk factors (Dynamic Pricing)
+    pub fn calculate_dynamic_premium(
+        env: &Env,
+        risk_report: RiskReport,
+        base_rate: i128,
+        market_condition_factor: u32, // e.g. 100 = 1.0x
+    ) -> i128 {
+        // Simple dynamic pricing formula:
+        // Premium = Base * (Risk / 100) * (Location / 100) * (Market / 100) * (Ratio / 10000)
+        let risk_multiplier = risk_report.risk_score as i128; // 1-100
+        let location_multiplier = risk_report.location_factor as i128; // 1-100
+        let ratio_multiplier = risk_report.coverage_ratio as i128; // 1-10000
+
+        let mut premium = base_rate;
+        premium = (premium * risk_multiplier) / 100;
+        premium = (premium * location_multiplier) / 100;
+        premium = (premium * market_condition_factor as i128) / 100;
+        premium = (premium * ratio_multiplier) / 10000;
+
+        premium
     }
 
     // Check if contract is paused
